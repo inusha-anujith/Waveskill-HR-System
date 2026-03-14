@@ -1,39 +1,96 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import EmployeeNavi from '../../../components/EmployeeNavi/EmployeeNavi';
 import EmployeeTabs from '../../../components/EmployeeNavi/EmployeeTabs';
 import EditProfileModal from '../../../components/Modals/EditProfileModal';
+import { useRouter } from 'next/navigation';
 import { 
   Edit, User, Mail, Phone, Calendar, Briefcase, Building, Award, Users, 
   MapPin, HeartPulse, Droplet, Clock, FileText, CheckCircle2, ShieldAlert, Code2, Database, Layout
 } from 'lucide-react';
 
 export default function EmployeeProfilePage() {
+  const router = useRouter();
+  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Overview');
 
-  // State to hold editable profile data
-  const [profileData, setProfileData] = useState({
-    phone: '+1234567892',
-    address: '123 Tech Lane, Colombo 03',
-    emergencyContact: 'Jane Doe (Wife)',
-    emergencyPhone: '+9876543210'
-  });
+  // Live Data States
+  const [userData, setUserData] = useState<any>(null);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [leaveStats, setLeaveStats] = useState({ totalDays: 0, approvedDays: 0, pendingDays: 0, rejectedDays: 0 });
+
+  // 1. Fetch User Profile
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) { router.push('/login'); return; }
+
+      const res = await fetch("http://localhost:5001/api/users/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setUserData(data.data);
+    } catch (error) { console.error("Error fetching profile:", error); }
+  };
+
+  // 2. Fetch Leave Stats
+  const fetchLeaveStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch("http://localhost:5001/api/leave/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.stats) setLeaveStats(data.stats);
+    } catch (error) { console.error("Error fetching leaves:", error); }
+  };
+
+  // 3. Fetch Attendance (For the Green Dot!)
+  const fetchAttendanceStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch("http://localhost:5001/api/attendance/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data.success && data.history) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        // Find if there's a record for today that has NO checkout time
+        const activeCheckIn = data.history.find((record: any) => 
+            record.dateString === todayStr && !record.checkOut
+        );
+        setIsCheckedIn(!!activeCheckIn); // True if active checkin found, False if checkout or none
+      }
+    } catch (error) { console.error("Error fetching attendance:", error); }
+  };
+
+  // Load everything when the page opens
+  useEffect(() => {
+    fetchUserProfile();
+    fetchLeaveStats();
+    fetchAttendanceStatus();
+  }, []);
 
   const handleLogout = () => {
-    alert("Logged out!");
+    localStorage.removeItem("token");
+    router.push('/login');
   };
 
-  const handleSaveProfile = (newData: any) => {
-    setProfileData(newData);
-    // In a real app, you would make an API call to your backend here to save this!
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "Not Set";
+    try { return new Date(dateString).toLocaleDateString(); } catch (e) { return dateString; }
   };
+
+  // If data is loading, show a quick placeholder
+  if (!userData) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading Profile...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10">
       {/* Navigation & Tabs */}
-      <EmployeeNavi employeeName="Nithini Jayathilaka" onLogout={handleLogout} />
+      <EmployeeNavi employeeName={userData.name} onLogout={handleLogout} />
       <EmployeeTabs activeTab="Profile" />
 
       {/* Main Content */}
@@ -44,27 +101,30 @@ export default function EmployeeProfilePage() {
           <div className="flex items-center gap-6">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-blue-700 text-white flex items-center justify-center text-3xl font-bold">
-                J
+              <div className="w-20 h-20 rounded-full bg-blue-700 text-white flex items-center justify-center text-3xl font-bold uppercase">
+                {userData.name.charAt(0)}
               </div>
-              <div className="absolute bottom-0 right-1 w-5 h-5 bg-green-500 border-4 border-white rounded-full"></div>
+              {/* 🚨 DYNAMIC GREEN/RED DOT BASED ON CHECK-IN STATUS! */}
+              <div className={`absolute bottom-0 right-1 w-5 h-5 border-4 border-white rounded-full ${isCheckedIn ? 'bg-green-500' : 'bg-red-500'}`}></div>
             </div>
             
             {/* Info */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">John Doe</h2>
-              <p className="text-gray-400 text-sm mb-3">Software Engineer</p>
+              <h2 className="text-2xl font-bold text-gray-900">{userData.name}</h2>
+              <p className="text-gray-400 text-sm mb-3">{userData.position || 'Employee'}</p>
               
               <div className="flex flex-wrap items-center gap-2">
                 <span className="bg-black text-white text-[11px] font-medium px-3 py-1 rounded-full">
                   Active Employee
                 </span>
                 <span className="bg-white border border-gray-200 text-gray-600 text-[11px] font-medium px-3 py-1 rounded-full">
-                  Engineering
+                  {userData.department || 'Unassigned'}
                 </span>
-                <span className="bg-white border border-gray-200 text-gray-600 text-[11px] font-medium px-3 py-1 rounded-full">
-                  EMP-000003
-                </span>
+                {userData.employeeId && (
+                  <span className="bg-white border border-gray-200 text-gray-600 text-[11px] font-medium px-3 py-1 rounded-full">
+                    {userData.employeeId}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -78,23 +138,23 @@ export default function EmployeeProfilePage() {
           </button>
         </div>
 
-        {/* Top Leave Stats */}
+        {/* Top Leave Stats - LIVE DATA */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <p className="text-sm text-gray-500 mb-2">Total Leaves</p>
-            <p className="text-4xl font-semibold text-gray-900">3 days</p>
+            <p className="text-4xl font-semibold text-gray-900">{leaveStats.totalDays}</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <p className="text-sm text-gray-500 mb-2">Approved</p>
-            <p className="text-4xl font-semibold text-green-500">0 days</p>
+            <p className="text-4xl font-semibold text-green-500">{leaveStats.approvedDays}</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <p className="text-sm text-gray-500 mb-2">Pending</p>
-            <p className="text-4xl font-semibold text-orange-400">3 days</p>
+            <p className="text-4xl font-semibold text-orange-400">{leaveStats.pendingDays}</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <p className="text-sm text-gray-500 mb-2">Rejected</p>
-            <p className="text-4xl font-semibold text-red-600">0</p>
+            <p className="text-4xl font-semibold text-red-600">{leaveStats.rejectedDays}</p>
           </div>
         </div>
 
@@ -121,7 +181,7 @@ export default function EmployeeProfilePage() {
             {/* Info Cards Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               
-              {/* Personal Information */}
+              {/* Personal Information - LIVE DATA */}
               <div className="bg-white rounded-2xl border border-gray-200 p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <User size={20} className="text-gray-700" />
@@ -133,34 +193,34 @@ export default function EmployeeProfilePage() {
                     <Mail className="text-gray-400" size={20} />
                     <div>
                       <p className="text-xs text-gray-500 mb-0.5">Email Address</p>
-                      <p className="text-sm font-semibold text-gray-900">john@company.com</p>
+                      <p className="text-sm font-semibold text-gray-900">{userData.email}</p>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-4">
                     <Phone className="text-gray-400" size={20} />
                     <div>
                       <p className="text-xs text-gray-500 mb-0.5">Phone Number</p>
-                      <p className="text-sm font-semibold text-gray-900">{profileData.phone}</p>
+                      <p className="text-sm font-semibold text-gray-900">{userData.phoneNumber || 'Not Set'}</p>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-4">
                     <MapPin className="text-gray-400" size={20} />
                     <div>
                       <p className="text-xs text-gray-500 mb-0.5">Home Address</p>
-                      <p className="text-sm font-semibold text-gray-900">{profileData.address}</p>
+                      <p className="text-sm font-semibold text-gray-900">{userData.homeAddress || 'Not Set'}</p>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-4">
                     <Calendar className="text-gray-400" size={20} />
                     <div>
                       <p className="text-xs text-gray-500 mb-0.5">Join Date</p>
-                      <p className="text-sm font-semibold text-gray-900">March 1, 2024</p>
+                      <p className="text-sm font-semibold text-gray-900">{formatDate(userData.joinDate)}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Professional Information */}
+              {/* Professional Information - LIVE DATA */}
               <div className="bg-white rounded-2xl border border-gray-200 p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <Briefcase size={20} className="text-gray-700" />
@@ -172,154 +232,26 @@ export default function EmployeeProfilePage() {
                     <Building className="text-gray-400" size={20} />
                     <div>
                       <p className="text-xs text-gray-500 mb-0.5">Department</p>
-                      <p className="text-sm font-semibold text-gray-900">Engineering</p>
+                      <p className="text-sm font-semibold text-gray-900">{userData.department || 'Unassigned'}</p>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-4">
                     <Award className="text-gray-400" size={20} />
                     <div>
                       <p className="text-xs text-gray-500 mb-0.5">Position</p>
-                      <p className="text-sm font-semibold text-gray-900">Software Engineer</p>
+                      <p className="text-sm font-semibold text-gray-900">{userData.position || 'Employee'}</p>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-4">
                     <Users className="text-gray-400" size={20} />
                     <div>
-                      <p className="text-xs text-gray-500 mb-0.5">Role</p>
-                      <p className="text-sm font-semibold text-gray-900">Employee</p>
+                      <p className="text-xs text-gray-500 mb-0.5">System Role</p>
+                      <p className="text-sm font-semibold text-gray-900">{userData.role}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-            </div>
-
-            {/* Leave Balance Overview */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 mb-8">
-              <div className="flex items-center gap-3 mb-2">
-                <Calendar size={20} className="text-gray-700" />
-                <h3 className="text-lg font-semibold text-gray-900">Leave Balance Overview</h3>
-              </div>
-              <p className="text-sm text-gray-500 mb-8">Your annual leave allocation and usage</p>
-
-              <div className="flex justify-between items-end mb-4">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Total Annual Leave</p>
-                  <p className="text-3xl font-semibold text-gray-900">20 days</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500 mb-1">Total Annual Leave</p>
-                  <p className="text-3xl font-semibold text-green-500">20 days</p>
-                </div>
-              </div>
-
-              <div className="mb-8">
-                <p className="text-xs text-gray-500 mb-2">Leave utilization</p>
-                <div className="w-full bg-gray-300 rounded-full h-1.5"></div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                  <p className="text-sm text-gray-500 mb-2">Approved</p>
-                  <p className="text-4xl font-semibold text-blue-600">0</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                  <p className="text-sm text-gray-500 mb-2">Pending</p>
-                  <p className="text-4xl font-semibold text-orange-400">0</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                  <p className="text-sm text-gray-500 mb-2">Available</p>
-                  <p className="text-4xl font-semibold text-green-500">20</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                  <p className="text-sm text-gray-500 mb-2">Used Days</p>
-                  <p className="text-4xl font-semibold text-red-500">0</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== TAB CONTENT: ACTIVITY ==================== */}
-        {activeTab === 'Activity' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 animate-in fade-in duration-300">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-              <Clock size={20} className="text-gray-500" /> Recent Activity
-            </h3>
-            
-            <div className="relative border-l border-gray-200 ml-3 space-y-8 pb-4">
-              <div className="relative pl-8">
-                <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-green-500"></div>
-                <p className="text-sm font-semibold text-gray-900">Checked In Successfully</p>
-                <p className="text-xs text-gray-500 mt-1">Today, 09:00 AM</p>
-              </div>
-              <div className="relative pl-8">
-                <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-orange-400"></div>
-                <p className="text-sm font-semibold text-gray-900">Submitted Sick Leave Request</p>
-                <p className="text-xs text-gray-500 mt-1">Yesterday, 14:30 PM</p>
-                <div className="mt-3 bg-gray-50 border border-gray-100 p-3 rounded-lg flex items-center gap-2 text-sm text-gray-600">
-                  <FileText size={16} className="text-gray-400" /> Requested 2 days off (1/10/2026 - 1/12/2026)
-                </div>
-              </div>
-              <div className="relative pl-8">
-                <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-blue-500"></div>
-                <p className="text-sm font-semibold text-gray-900">Assigned to New Project</p>
-                <p className="text-xs text-gray-500 mt-1">Jan 5, 2026</p>
-                <p className="text-sm text-gray-600 mt-1">You were assigned to "HR Management System" by Sarah Manager.</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== TAB CONTENT: SKILLS ==================== */}
-        {activeTab === 'Skills' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 animate-in fade-in duration-300">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-              <Award size={20} className="text-gray-500" /> Professional Skills
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-semibold flex items-center gap-2"><Layout size={16} className="text-blue-500" /> Frontend Development</span>
-                    <span className="text-gray-500">Expert</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div className="bg-blue-500 h-2 rounded-full w-[90%]"></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-semibold flex items-center gap-2"><Code2 size={16} className="text-green-500" /> React / Next.js</span>
-                    <span className="text-gray-500">Advanced</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div className="bg-green-500 h-2 rounded-full w-[80%]"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-semibold flex items-center gap-2"><Database size={16} className="text-orange-500" /> Node.js / Express</span>
-                    <span className="text-gray-500">Intermediate</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div className="bg-orange-500 h-2 rounded-full w-[60%]"></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-semibold flex items-center gap-2"><Layout size={16} className="text-purple-500" /> UI/UX Design</span>
-                    <span className="text-gray-500">Intermediate</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div className="bg-purple-500 h-2 rounded-full w-[50%]"></div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -337,9 +269,9 @@ export default function EmployeeProfilePage() {
                   <HeartPulse size={20} />
                 </div>
                 <h4 className="text-sm font-semibold text-gray-900 mb-1">Primary Emergency Contact</h4>
-                <p className="text-lg font-bold text-gray-900 mb-1">{profileData.emergencyContact}</p>
+                <p className="text-lg font-bold text-gray-900 mb-1">{userData.emergencyContact?.name || 'Not Set'}</p>
                 <p className="text-sm font-medium text-gray-600 flex items-center gap-2 mt-4 bg-white/60 p-2 rounded-lg inline-flex border border-red-100/50">
-                  <Phone size={14} className="text-red-500" /> {profileData.emergencyPhone}
+                  <Phone size={14} className="text-red-500" /> {userData.emergencyContact?.phone || 'Not Set'}
                 </p>
               </div>
 
@@ -352,11 +284,11 @@ export default function EmployeeProfilePage() {
                 <div className="flex gap-4">
                   <div className="bg-white/60 p-3 rounded-lg border border-blue-100/50 flex-1 text-center">
                     <p className="text-xs text-gray-500 mb-1">Blood Group</p>
-                    <p className="font-bold text-gray-900">O+</p>
+                    <p className="font-bold text-gray-900">{userData.medicalDetails?.bloodGroup || 'Not Set'}</p>
                   </div>
                   <div className="bg-white/60 p-3 rounded-lg border border-blue-100/50 flex-1 text-center">
                     <p className="text-xs text-gray-500 mb-1">Allergies</p>
-                    <p className="font-bold text-gray-900">None</p>
+                    <p className="font-bold text-gray-900">{userData.medicalDetails?.allergies || 'None'}</p>
                   </div>
                 </div>
               </div>
@@ -364,14 +296,21 @@ export default function EmployeeProfilePage() {
           </div>
         )}
 
+        {/* ... (Activity and Skills tabs omitted here for brevity as they are static for now, you can keep your existing ones) ... */}
+
       </main>
 
-      {/* Profile Edit Modal */}
+      {/* Profile Edit Modal - Passed live user data! */}
       <EditProfileModal 
         isOpen={isEditModalOpen} 
         onClose={() => setIsEditModalOpen(false)} 
-        currentData={profileData}
-        onSave={handleSaveProfile}
+        currentData={{
+            phone: userData.phoneNumber || '',
+            address: userData.homeAddress || '',
+            emergencyContact: userData.emergencyContact?.name || '',
+            emergencyPhone: userData.emergencyContact?.phone || ''
+        }}
+        onSaveSuccess={fetchUserProfile} // This tells the modal to refresh the page after saving!
       />
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Camera, MapPin, Phone, HeartPulse } from 'lucide-react';
 
 interface EditProfileModalProps {
@@ -12,22 +12,64 @@ interface EditProfileModalProps {
     emergencyContact: string;
     emergencyPhone: string;
   };
-  onSave: (data: any) => void;
+  onSaveSuccess: () => void; // This tells the parent to refresh the page!
 }
 
-export default function EditProfileModal({ isOpen, onClose, currentData, onSave }: EditProfileModalProps) {
+export default function EditProfileModal({ isOpen, onClose, currentData, onSaveSuccess }: EditProfileModalProps) {
+  // Initialize form state
   const [formData, setFormData] = useState(currentData);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // When the modal opens, ensure it has the latest data
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(currentData);
+    }
+  }, [isOpen, currentData]);
 
   if (!isOpen) return null;
 
+  // Handle typing in the input fields
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 🚨 NEW LOGIC: Send the data to the backend!
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
-    onClose();
+    setIsSaving(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      const res = await fetch("http://localhost:5001/api/users/me", {
+        method: 'PUT',
+        headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            phone: formData.phone,
+            address: formData.address,
+            emergencyContact: formData.emergencyContact,
+            emergencyPhone: formData.emergencyPhone
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        onSaveSuccess(); // Refresh the profile page!
+        onClose();       // Close the modal!
+      } else {
+        alert("Failed to update profile: " + (data.message || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Network error while saving.");
+    }
+
+    setIsSaving(false);
   };
 
   return (
@@ -47,13 +89,10 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSave 
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           
-          {/* Profile Picture Update */}
+          {/* Profile Picture Update (UI Only for now) */}
           <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
             <div className="w-16 h-16 rounded-full bg-blue-700 text-white flex items-center justify-center text-2xl font-bold relative group cursor-pointer overflow-hidden">
-              J
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Camera size={20} className="text-white" />
-              </div>
+              <Camera size={24} className="text-white opacity-70" />
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-900">Profile Picture</p>
@@ -141,11 +180,19 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSave 
 
           {/* Actions */}
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
-            <button type="button" onClick={onClose} className="px-6 py-3.5 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm">
+            <button 
+                type="button" 
+                onClick={onClose} 
+                className="px-6 py-3.5 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm"
+            >
               Cancel
             </button>
-            <button type="submit" className="px-6 py-3.5 bg-[#1a1a1a] text-white font-semibold rounded-xl hover:bg-black transition-colors text-sm">
-              Save Changes
+            <button 
+                type="submit" 
+                disabled={isSaving}
+                className="px-6 py-3.5 bg-[#1a1a1a] text-white font-semibold rounded-xl hover:bg-black transition-colors text-sm disabled:opacity-70"
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>
