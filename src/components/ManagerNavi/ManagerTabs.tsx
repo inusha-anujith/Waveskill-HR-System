@@ -1,17 +1,15 @@
 import React from 'react';
 import Link from 'next/link';
-import { LineChart, Users, Calendar, FileText, LayoutGrid, Bell } from 'lucide-react';
+import { LineChart, FileText, LayoutGrid, Bell } from 'lucide-react';
 
 interface ManagerTabsProps {
   activeTab: 'Analytics' | 'Employees' | 'Attendance' | 'Leaves' | 'Projects' | 'Announcements';
 }
 
+// Employees and Attendance are Admin-only per Dasuni.pdf — hidden from Manager nav.
 const ManagerTabs: React.FC<ManagerTabsProps> = ({ activeTab }) => {
-  // Added 'path' to map to Manager routes
   const tabs = [
     { name: 'Analytics', path: '/Manager/Analytics', icon: <LineChart size={18} strokeWidth={2} /> },
-    { name: 'Employees', path: '/Manager/EmployeeManage', icon: <Users size={18} strokeWidth={2} /> },
-    { name: 'Attendance', path: '/Manager/Attendance', icon: <Calendar size={18} strokeWidth={2} /> },
     { name: 'Leaves', path: '/Manager/Leave', icon: <FileText size={18} strokeWidth={2} /> },
     { name: 'Projects', path: '/Manager/Project', icon: <LayoutGrid size={18} strokeWidth={2} /> },
     { name: 'Announcements', path: '/Manager/Announcement', icon: <Bell size={18} strokeWidth={2} /> },

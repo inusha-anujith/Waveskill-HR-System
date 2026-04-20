@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import { Building2, Mail, Lock } from 'lucide-react';
+import { API_BASE } from '../../lib/api';
 
 export default function LoginPage() {
   // Initialize the router so we can change pages!
@@ -19,8 +20,7 @@ export default function LoginPage() {
     setError(""); // Clear previous errors
 
     try {
-      // Sending the data across the bridge!
-      const response = await fetch("http://localhost:5001/api/users/login", {
+      const response = await fetch(`${API_BASE}/api/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -28,14 +28,18 @@ export default function LoginPage() {
 
       const data = await response.json();
 
-      if (response.ok) {
-        // Success! Save the token
+      if (response.ok && data.success) {
         localStorage.setItem("token", data.token);
-        alert("Login Successful! Welcome to Waveskill HR.");
-        
-        // redirect the user directly to the Employee Attendance dashboard!
-        router.push('/Employee/Attendance'); 
-        
+        localStorage.setItem("role", data.role || "Employee");
+        localStorage.setItem("name", data.name || "");
+
+        if (data.role === "Admin") {
+          router.push("/Admin/Analytics");
+        } else if (data.role === "Manager") {
+          router.push("/Manager/Analytics");
+        } else {
+          router.push("/Employee/Attendance");
+        }
       } else {
         setError(data.message || "Login failed");
       }
