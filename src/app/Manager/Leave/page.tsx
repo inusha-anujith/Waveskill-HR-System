@@ -160,6 +160,21 @@ export default function ManagerLeavePage() {
           </div>
         )}
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <p className="text-sm text-gray-500 mb-2">Pending Requests</p>
+            <p className="text-4xl font-semibold text-gray-900">{pendingCount}</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <p className="text-sm text-gray-500 mb-2">Approved</p>
+            <p className="text-4xl font-semibold text-green-500">{approvedCount}</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <p className="text-sm text-gray-500 mb-2">Rejected</p>
+            <p className="text-4xl font-semibold text-red-500">{rejectedCount}</p>
+          </div>
+        </div>
+
         <div className="bg-white rounded-2xl border border-gray-200 p-8 flex flex-col gap-6">
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -250,21 +265,6 @@ export default function ManagerLeavePage() {
             </table>
           </div>
 
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <p className="text-sm text-gray-500 mb-2">Pending Requests</p>
-            <p className="text-4xl font-semibold text-gray-900">{pendingCount}</p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <p className="text-sm text-gray-500 mb-2">Approved</p>
-            <p className="text-4xl font-semibold text-green-500">{approvedCount}</p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <p className="text-sm text-gray-500 mb-2">Rejected</p>
-            <p className="text-4xl font-semibold text-red-500">{rejectedCount}</p>
-          </div>
         </div>
 
       </main>

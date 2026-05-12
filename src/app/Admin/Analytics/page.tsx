@@ -4,27 +4,34 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminNavi from '../../../components/AdminNavi/AdminNavi';
 import AdminTabs from '../../../components/AdminNavi/AdminTabs';
-import { Users, Activity, FileText, LayoutGrid } from 'lucide-react';
-import ChartModal from '../../../components/Modals/ChartModal';
+import { Users, Bell, UserCheck, Clock } from 'lucide-react';
 import { API_BASE, authHeaders, clearAuth, formatTime, getStoredName } from '../../../lib/api';
 
-interface Summary {
-  activeEmployees: number;
-  todayAttendance: { present: number; late: number; absent: number; checkedIn: number; rate: number };
-  pendingLeaves: number;
+interface DeptBreakdown { department: string; count: number }
+interface CvBreakdown { status: string; count: number }
+interface AdminSummaryData {
+  totalEmployees: number;
+  totalManagers: number;
+  totalStaff: number;
+  recentJoins: number;
+  systemAnnouncementCount: number;
+  departmentBreakdown: DeptBreakdown[];
+  cvStatusBreakdown: CvBreakdown[];
 }
 
-interface BackendLeave { _id: string; status: 'Pending' | 'Approved' | 'Rejected' }
-interface BackendUser { _id: string; name: string; role: string; position?: string; department?: string }
+interface BackendUser { _id: string; name: string; role: string; position?: string }
 interface BackendAttendance { _id: string; user: { _id: string } | null; checkIn?: string; status: 'Present' | 'Late' | 'Absent' }
-
 interface AvailabilityRow { id: string; name: string; role: string; status: string }
+
+const CV_COLORS: Record<string, string> = {
+  'Up to Date': '#22c55e',
+  'Needs Update': '#ef4444',
+  'Pending Review': '#eab308',
+};
 
 export default function AdminAnalyticsPage() {
   const router = useRouter();
-  const [activeChart, setActiveChart] = useState<'attendance' | 'leave' | 'department' | 'project' | null>(null);
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [leaveStats, setLeaveStats] = useState({ pending: 0, approved: 0, rejected: 0 });
+  const [summary, setSummary] = useState<AdminSummaryData | null>(null);
   const [availability, setAvailability] = useState<AvailabilityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,53 +43,38 @@ export default function AdminAnalyticsPage() {
     const load = async () => {
       try {
         const todayStr = new Date().toISOString().split('T')[0];
-        const [sumRes, leavesRes, usersRes, attRes] = await Promise.all([
+        const [sumRes, usersRes, attRes] = await Promise.all([
           fetch(`${API_BASE}/api/admin/analytics/summary`, { headers: authHeaders() }),
-          fetch(`${API_BASE}/api/admin/leaves`, { headers: authHeaders() }),
           fetch(`${API_BASE}/api/admin/users`, { headers: authHeaders() }),
           fetch(`${API_BASE}/api/admin/attendance?date=${todayStr}`, { headers: authHeaders() }),
         ]);
 
-        if ([sumRes, leavesRes, usersRes, attRes].some(r => r.status === 401)) {
+        if ([sumRes, usersRes, attRes].some(r => r.status === 401)) {
           router.push('/login');
           return;
         }
 
-        const [sumData, leavesData, usersData, attData] = await Promise.all([
-          sumRes.json(), leavesRes.json(), usersRes.json(), attRes.json(),
+        const [sumData, usersData, attData] = await Promise.all([
+          sumRes.json(), usersRes.json(), attRes.json(),
         ]);
 
-        if (sumData.success) setSummary(sumData.data);
-
-        if (leavesData.success) {
-          const arr = leavesData.data as BackendLeave[];
-          setLeaveStats({
-            pending: arr.filter(l => l.status === 'Pending').length,
-            approved: arr.filter(l => l.status === 'Approved').length,
-            rejected: arr.filter(l => l.status === 'Rejected').length,
-          });
+        if (sumData.success && sumData.role === 'Admin') {
+          setSummary(sumData.data as AdminSummaryData);
         }
 
         if (usersData.success && attData.success) {
           const users = (usersData.data as BackendUser[]).filter(u => u.role !== 'Admin');
           const attMap: Record<string, BackendAttendance> = {};
-          (attData.data as BackendAttendance[]).forEach(a => {
-            if (a.user) attMap[a.user._id] = a;
-          });
+          (attData.data as BackendAttendance[]).forEach(a => { if (a.user) attMap[a.user._id] = a; });
           setAvailability(users.map(u => {
             const rec = attMap[u._id];
             let status = 'Not Checked In';
             if (rec) {
               status = rec.status === 'Late'
                 ? `Late · ${formatTime(rec.checkIn)}`
-                : `Present · ${formatTime(rec.checkIn)}`;
+                : formatTime(rec.checkIn);
             }
-            return {
-              id: u._id,
-              name: u.name,
-              role: u.position || u.role,
-              status,
-            };
+            return { id: u._id, name: u.name, role: u.position || u.role, status };
           }));
         }
       } catch (e: any) {
@@ -94,21 +86,10 @@ export default function AdminAnalyticsPage() {
     load();
   }, [router]);
 
-  const handleLogout = () => {
-    clearAuth();
-    router.push('/login');
-  };
+  const handleLogout = () => { clearAuth(); router.push('/login'); };
 
-  const present = summary?.todayAttendance.present ?? 0;
-  const late = summary?.todayAttendance.late ?? 0;
-  const checkedIn = summary?.todayAttendance.checkedIn ?? 0;
-  const absent = summary?.todayAttendance.absent ?? 0;
-  const rate = summary?.todayAttendance.rate ?? 0;
-  const presentPct = checkedIn > 0 ? Math.round((present / checkedIn) * 100) : 0;
-  const latePct = checkedIn > 0 ? 100 - presentPct : 0;
-
-  const leaveBarMax = Math.max(1, leaveStats.pending, leaveStats.approved, leaveStats.rejected);
-  const barHeight = (n: number) => `${Math.round((n / leaveBarMax) * 100)}%`;
+  const deptMax = Math.max(1, ...(summary?.departmentBreakdown.map(d => d.count) ?? [1]));
+  const cvTotal = (summary?.cvStatusBreakdown ?? []).reduce((s, c) => s + c.count, 0) || 1;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10">
@@ -118,173 +99,140 @@ export default function AdminAnalyticsPage() {
       <main className="p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col gap-6">
 
         {error && (
-          <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl p-4">
-            {error}
-          </div>
+          <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl p-4">{error}</div>
         )}
 
-        {/* Top Stats Row */}
+        {/* Stats row – admin-scoped: employees + announcements */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* IN SCOPE: Active Employees */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
             <div className="flex justify-between items-start mb-2">
-              <p className="text-sm text-gray-500 font-medium">Active Employees</p>
+              <p className="text-sm text-gray-500 font-medium">Total Employees</p>
               <Users size={18} className="text-gray-400" />
             </div>
-            <p className="text-4xl font-semibold text-green-500 mb-2">
-              {loading ? '...' : summary?.activeEmployees ?? 0}
-            </p>
-            <p className="text-[11px] text-gray-400">Total registered users</p>
+            <p className="text-4xl font-semibold text-green-500 mb-2">{loading ? '...' : summary?.totalEmployees ?? 0}</p>
+            <p className="text-[11px] text-gray-400">{summary?.totalManagers ?? 0} manager{summary?.totalManagers !== 1 ? 's' : ''} · {summary?.totalEmployees ?? 0} employee{summary?.totalEmployees !== 1 ? 's' : ''}</p>
           </div>
 
-          {/* IN SCOPE: Attendance Rate */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
             <div className="flex justify-between items-start mb-2">
-              <p className="text-sm text-gray-500 font-medium">Attendance Rate</p>
-              <Activity size={18} className="text-gray-400" />
+              <p className="text-sm text-gray-500 font-medium">Total Staff</p>
+              <UserCheck size={18} className="text-gray-400" />
             </div>
-            <p className="text-4xl font-semibold text-blue-600 mb-2">
-              {loading ? '...' : `${rate}%`}
-            </p>
-            <p className="text-[11px] text-gray-400">{checkedIn} checked in / {absent} absent today</p>
+            <p className="text-4xl font-semibold text-blue-600 mb-2">{loading ? '...' : summary?.totalStaff ?? 0}</p>
+            <p className="text-[11px] text-gray-400">Employees + Managers</p>
           </div>
 
-          {/* IN SCOPE: Pending Leaves */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
             <div className="flex justify-between items-start mb-2">
-              <p className="text-sm text-gray-500 font-medium">Pending Leaves</p>
-              <FileText size={18} className="text-gray-400" />
+              <p className="text-sm text-gray-500 font-medium">Recent Joins</p>
+              <Clock size={18} className="text-gray-400" />
             </div>
-            <p className="text-4xl font-semibold text-gray-900 mb-2">
-              {loading ? '...' : summary?.pendingLeaves ?? 0}
-            </p>
-            <p className="text-[11px] text-gray-400">Awaiting approval</p>
+            <p className="text-4xl font-semibold text-orange-400 mb-2">{loading ? '...' : summary?.recentJoins ?? 0}</p>
+            <p className="text-[11px] text-gray-400">Joined in last 30 days</p>
           </div>
 
-          {/* OUT OF SCOPE: Active Projects (placeholder for projects teammate) */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
             <div className="flex justify-between items-start mb-2">
-              <p className="text-sm text-gray-500 font-medium">Active Projects</p>
-              <LayoutGrid size={18} className="text-gray-400" />
+              <p className="text-sm text-gray-500 font-medium">System Announcements</p>
+              <Bell size={18} className="text-gray-400" />
             </div>
-            <p className="text-4xl font-semibold text-orange-400 mb-2">2</p>
-            <p className="text-[11px] text-gray-400">Total registered users</p>
+            <p className="text-4xl font-semibold text-purple-500 mb-2">{loading ? '...' : summary?.systemAnnouncementCount ?? 0}</p>
+            <p className="text-[11px] text-gray-400">Total posted</p>
           </div>
         </div>
 
-        {/* Charts Grid */}
+        {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          {/* IN SCOPE: Attendance Overview */}
-          <div
-            onClick={() => setActiveChart('attendance')}
-            className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col min-h-[300px] cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group"
-          >
-            <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Attendance Overview</h3>
-            <p className="text-[11px] text-gray-500 mb-8">Today's attendance distribution</p>
-            <div className="flex-1 flex items-center justify-center relative">
-              <div
-                className="w-40 h-40 rounded-full group-hover:scale-105 transition-transform duration-300"
-                style={{ background: `conic-gradient(#22c55e 0% ${presentPct}%, #eab308 ${presentPct}% 100%)` }}
-              ></div>
-              <span className="absolute left-10 top-8 text-xs font-medium text-green-500">Present: {presentPct}%</span>
-              <span className="absolute right-12 bottom-4 text-xs font-medium text-yellow-500">Late: {latePct}%</span>
-              <span className="absolute right-4 top-20 text-xs font-medium text-purple-400 opacity-50">Absent: {absent}</span>
-            </div>
+          {/* Department Distribution */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col min-h-[300px]">
+            <h3 className="text-sm font-semibold text-gray-900">Department Distribution</h3>
+            <p className="text-[11px] text-gray-500 mb-6">Employees and managers by department</p>
+            {summary?.departmentBreakdown && summary.departmentBreakdown.length > 0 ? (
+              <div className="flex-1 relative border-l border-b border-gray-200 ml-6 mt-4 flex items-end justify-around gap-2 pb-0">
+                <div className="absolute -left-4 top-0 text-[10px] text-gray-400">{deptMax}</div>
+                <div className="absolute -left-4 bottom-0 text-[10px] text-gray-400">0</div>
+                {['top-1/4','top-1/2','top-3/4'].map(p => (
+                  <div key={p} className={`absolute w-full border-t border-dashed border-gray-100 ${p}`} />
+                ))}
+                {summary.departmentBreakdown.slice(0, 6).map((d, i) => {
+                  const colors = ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#06b6d4'];
+                  const h = `${Math.round((d.count / deptMax) * 100)}%`;
+                  return (
+                    <div key={d.department} className="flex flex-col items-center flex-1 min-w-0">
+                      <div className="w-full max-w-[40px] relative z-10 flex items-end justify-center pb-1 rounded-t-sm" style={{ height: h, backgroundColor: colors[i % colors.length] }}>
+                        <span className="text-[10px] font-semibold text-white">{d.count}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-sm text-gray-400">No data</div>
+            )}
+            {summary?.departmentBreakdown && (
+              <div className="flex justify-around ml-6 mt-2 gap-2 flex-wrap">
+                {summary.departmentBreakdown.slice(0, 6).map(d => (
+                  <span key={d.department} className="text-[10px] text-gray-500 text-center truncate max-w-[60px]" title={d.department}>
+                    {d.department.length > 8 ? d.department.slice(0, 8) + '…' : d.department}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* IN SCOPE: Leave Requests */}
-          <div
-            onClick={() => setActiveChart('leave')}
-            className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col min-h-[300px] cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group"
-          >
-            <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Leave Requests</h3>
-            <p className="text-[11px] text-gray-500 mb-6">Status distribution</p>
-            <div className="flex-1 relative border-l border-b border-gray-200 ml-6 mt-4 flex items-end justify-around pb-0">
-              <div className="absolute -left-6 top-0 text-[10px] text-gray-400">{leaveBarMax}</div>
-              <div className="absolute -left-4 bottom-0 text-[10px] text-gray-400">0</div>
-
-              <div className="absolute w-full border-t border-dashed border-gray-100 top-1/4"></div>
-              <div className="absolute w-full border-t border-dashed border-gray-100 top-1/2"></div>
-              <div className="absolute w-full border-t border-dashed border-gray-100 top-3/4"></div>
-
-              <div className="w-16 bg-gray-400 relative z-10 group-hover:bg-gray-500 transition-colors flex items-end justify-center pb-1" style={{ height: barHeight(leaveStats.pending) }}>
-                <span className="text-[10px] font-semibold text-white">{leaveStats.pending}</span>
-              </div>
-              <div className="w-16 bg-green-500 relative z-10 group-hover:bg-green-600 transition-colors flex items-end justify-center pb-1" style={{ height: barHeight(leaveStats.approved) }}>
-                <span className="text-[10px] font-semibold text-white">{leaveStats.approved}</span>
-              </div>
-              <div className="w-16 bg-red-500 relative z-10 group-hover:bg-red-600 transition-colors flex items-end justify-center pb-1" style={{ height: barHeight(leaveStats.rejected) }}>
-                <span className="text-[10px] font-semibold text-white">{leaveStats.rejected}</span>
-              </div>
-            </div>
-            <div className="flex justify-around ml-6 mt-2 text-[11px] text-gray-500">
-              <span className="w-16 text-center">Pending</span>
-              <span className="w-16 text-center">Approved</span>
-              <span className="w-16 text-center">Rejected</span>
-            </div>
-          </div>
-
-          {/* OUT OF SCOPE: Department Distribution (placeholder) */}
-          <div
-            onClick={() => setActiveChart('department')}
-            className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col min-h-[300px] cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group"
-          >
-            <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Department Distribution</h3>
-            <p className="text-[11px] text-gray-500 mb-6">Employees by department</p>
-            <div className="flex-1 relative border-l border-b border-gray-200 ml-4 mt-4 flex items-end justify-around pb-0">
-               <div className="absolute -left-4 top-0 text-[10px] text-gray-400">2</div>
-               <div className="absolute -left-6 top-1/4 text-[10px] text-gray-400">1.5</div>
-               <div className="absolute -left-4 top-1/2 text-[10px] text-gray-400">1</div>
-               <div className="absolute -left-6 top-3/4 text-[10px] text-gray-400">0.5</div>
-               <div className="absolute -left-4 bottom-0 text-[10px] text-gray-400">0</div>
-
-               <div className="absolute w-full border-t border-dashed border-gray-100 top-1/4"></div>
-               <div className="absolute w-full border-t border-dashed border-gray-100 top-1/2"></div>
-               <div className="absolute w-full border-t border-dashed border-gray-100 top-3/4"></div>
-
-               <div className="w-24 h-full bg-[#10b981] relative z-10 group-hover:bg-[#059669] transition-colors"></div>
-               <div className="w-24 h-1/2 bg-[#10b981] relative z-10 group-hover:bg-[#059669] transition-colors"></div>
-            </div>
-            <div className="flex justify-around ml-4 mt-2 text-[11px] text-gray-500">
-              <span className="w-24 text-center">Engineering</span>
-              <span className="w-24 text-center">Marketing</span>
-            </div>
-          </div>
-
-          {/* OUT OF SCOPE: Project Status (placeholder) */}
-          <div
-            onClick={() => setActiveChart('project')}
-            className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col min-h-[300px] cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group"
-          >
-            <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Project Status</h3>
-            <p className="text-[11px] text-gray-500 mb-8">Project distribution by status</p>
-            <div className="flex-1 flex items-center justify-center relative">
-              <div className="w-32 h-32 rounded-full bg-blue-500 group-hover:scale-105 transition-transform duration-300"></div>
-              <div className="absolute w-16 border-t border-blue-300 right-1/2 top-1/2 transform translate-x-1/2"></div>
-              <span className="absolute left-1/4 top-1/2 text-[11px] font-medium text-blue-500 -translate-y-1/2 bg-white px-1">Active: 2</span>
-            </div>
+          {/* CV Status Distribution */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col min-h-[300px]">
+            <h3 className="text-sm font-semibold text-gray-900">CV Update Status</h3>
+            <p className="text-[11px] text-gray-500 mb-6">Profile CV update status across all staff</p>
+            {summary?.cvStatusBreakdown && summary.cvStatusBreakdown.length > 0 ? (
+              <>
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="w-36 h-36 rounded-full" style={{
+                    background: (() => {
+                      const segments = summary.cvStatusBreakdown;
+                      let gradient = '';
+                      let cumPct = 0;
+                      segments.forEach(s => {
+                        const pct = (s.count / cvTotal) * 100;
+                        gradient += `${CV_COLORS[s.status] ?? '#9ca3af'} ${cumPct}% ${cumPct + pct}%, `;
+                        cumPct += pct;
+                      });
+                      return `conic-gradient(${gradient.replace(/, $/, '')})`;
+                    })()
+                  }} />
+                </div>
+                <div className="flex flex-wrap justify-center gap-3 mt-4">
+                  {summary.cvStatusBreakdown.map(s => (
+                    <div key={s.status} className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: CV_COLORS[s.status] ?? '#9ca3af' }} />
+                      <span className="text-[11px] text-gray-600">{s.status}: {s.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-sm text-gray-400">No data</div>
+            )}
           </div>
         </div>
 
-        {/* IN SCOPE: Employee Availability List */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mt-2">
+        {/* Employee Availability */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Employee Availability</h3>
-            <p className="text-[11px] text-gray-500">Current status overview</p>
+            <p className="text-[11px] text-gray-500">Today's check-in status</p>
           </div>
-
           <div className="space-y-3">
-            {availability.map((emp) => (
+            {availability.map(emp => (
               <div key={emp.id} className="bg-[#f9fafb] border border-gray-100 rounded-xl p-4 flex justify-between items-center">
                 <div>
                   <p className="text-sm font-medium text-gray-900">{emp.name}</p>
                   <p className="text-[11px] text-gray-500 mt-0.5">{emp.role}</p>
                 </div>
                 <span className={`text-xs font-medium ${
-                  emp.status.startsWith('Present') ? 'text-green-600'
+                  emp.status === 'Not Checked In' ? 'text-gray-400'
                   : emp.status.startsWith('Late') ? 'text-orange-500'
-                  : 'text-gray-500'
+                  : 'text-green-600'
                 }`}>{emp.status}</span>
               </div>
             ))}
@@ -295,12 +243,6 @@ export default function AdminAnalyticsPage() {
         </div>
 
       </main>
-
-      <ChartModal
-        isOpen={!!activeChart}
-        onClose={() => setActiveChart(null)}
-        chartId={activeChart}
-      />
     </div>
   );
 }
