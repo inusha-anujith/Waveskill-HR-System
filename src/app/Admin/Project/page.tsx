@@ -78,7 +78,7 @@ export default function AdminProjectsPage() {
         role="admin" 
         onLogout={handleLogout} 
       />
-      <AdminTabs activeTab="Projects" />
+      <AdminTabs activeTab="Analytics" />
 
       {/* Main Content */}
       <main className="p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col gap-6">

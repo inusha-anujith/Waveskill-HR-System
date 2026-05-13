@@ -149,7 +149,7 @@ export default function AdminLeavePage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10">
       <AdminNavi adminName={adminName} role="admin" onLogout={handleLogout} />
-      <AdminTabs activeTab="Leaves" />
+      <AdminTabs activeTab="Analytics" />
 
       <main className="p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col gap-6">
 
