@@ -8,9 +8,9 @@ export default function CustomerNavigation() {
   const pathname = usePathname();
 
   const navItems = [
+    { name: 'Home', href: '/Customer/Home', icon: LayoutGrid },
     { name: 'Projects', href: '/Customer/Projects', icon: LayoutGrid },
     { name: 'Profile', href: '/Customer/Profile', icon: User },
-    { name: 'Chat', href: '/Customer/Chat', icon: MessageSquare },
     { name: 'Support', href: '/Customer/Support', icon: Info },
   ];
 
@@ -27,8 +27,8 @@ export default function CustomerNavigation() {
               href={item.href}
               className={`flex items-center space-x-2 py-4 px-2 border-b-2 transition-colors ${
                 isActive 
-                  ? 'border-black text-black font-bold' 
-                  : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300'
+                  ? 'border-black font-bold text-black ' 
+                  : 'border-transparent font-bold text-gray-500 hover:text-black hover:border-gray-300'
               }`}
             >
               <Icon size={18} />

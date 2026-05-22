@@ -67,46 +67,48 @@ export default function ProjectsPage() {
   const currentProject = projectsData.find(p => p.id === activeProjectId);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto">
       
       {/* --- TOP METRIC CARDS GRID --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white border border-gray-200 p-5 shadow-sm rounded-xl flex flex-col justify-between">
-           <div className="flex justify-between items-start text-gray-400">
-             <h3 className="text-gray-500 text-xs uppercase tracking-wider font-semibold">All Projects</h3>
-             <Folder size={16} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex items-center justify-between">
+           <div className="space-y-1.5">
+             <h3 className="text-gray-400 text-xs uppercase tracking-wider font-bold">All Projects</h3>
+             <p className="text-3xl font-bold text-black">{totalCount}</p>
            </div>
-           <p className="text-3xl font-bold mt-2 text-black">{totalCount}</p>
+           <div className="p-3 bg-gray-50 border border-gray-100 text-gray-500 rounded-xl">
+             <Folder size={18} />
+           </div>
         </div>
-        <div className="bg-white border border-gray-200 p-5 shadow-sm rounded-xl flex flex-col justify-between">
-           <div className="flex justify-between items-start text-green-500">
-             <h3 className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Completed</h3>
-             <CheckCircle2 size={16} />
+
+        <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex items-center justify-between">
+           <div className="space-y-1.5">
+             <h3 className="text-gray-400 text-xs uppercase tracking-wider font-bold">Completed</h3>
+             <p className="text-3xl font-bold text-green-600">{completedCount}</p>
            </div>
-           <p className="text-3xl font-bold mt-2 text-green-600">{completedCount}</p>
+           <div className="p-3 bg-green-50 border border-green-100 text-green-600 rounded-xl">
+             <CheckCircle2 size={18} />
+           </div>
         </div>
-        <div className="bg-white border border-gray-200 p-5 shadow-sm rounded-xl flex flex-col justify-between">
-           <div className="flex justify-between items-start text-blue-500">
-             <h3 className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Ongoing</h3>
-             <Layers size={16} />
+
+        <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex items-center justify-between">
+           <div className="space-y-1.5">
+             <h3 className="text-gray-400 text-xs uppercase tracking-wider font-bold">Ongoing</h3>
+             <p className="text-3xl font-bold text-blue-600">{ongoingCount}</p>
            </div>
-           <p className="text-3xl font-bold mt-2 text-blue-600">{ongoingCount}</p>
+           <div className="p-3 bg-blue-50 border border-blue-100 text-blue-600 rounded-xl">
+             <Layers size={18} />
+           </div>
         </div>
-        <div className="bg-white border border-gray-200 p-5 shadow-sm rounded-xl flex flex-col justify-between">
-           <div className="flex justify-between items-start text-red-500">
-             <h3 className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Rejected</h3>
-             <XCircle size={16} />
+
+        <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex items-center justify-between">
+           <div className="space-y-1.5">
+             <h3 className="text-gray-400 text-xs uppercase tracking-wider font-bold">Rejected</h3>
+             <p className="text-3xl font-bold text-red-600">{rejectedCount}</p>
            </div>
-           <p className="text-3xl font-bold mt-2 text-red-600">{rejectedCount}</p>
-        </div>
-        
-        {/* Call-to-action Card: Start New Project */}
-        <div className="bg-black text-white p-5 shadow-sm rounded-xl flex flex-col justify-between cursor-pointer hover:bg-gray-900 transition-colors border border-black group">
-           <div className="flex justify-between items-start text-gray-400">
-             <h3 className="text-gray-300 text-xs uppercase tracking-wider font-semibold">Initialization</h3>
-             <Plus size={16} className="text-white group-hover:rotate-90 transition-transform duration-200" />
+           <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl">
+             <XCircle size={18} />
            </div>
-           <p className="text-lg font-bold mt-2">Start New Project</p>
         </div>
       </div>
 
@@ -115,48 +117,42 @@ export default function ProjectsPage() {
         
         /* ==================== 1. PROJECT LIST VIEW ==================== */
         <div className="space-y-4">
-          <div className="flex justify-between items-center px-2">
+          <div className="px-1">
             <h2 className="text-xl font-bold text-black">Your Projects</h2>
-            <p className="text-sm text-gray-500">Track and review statuses across development</p>
+            <p className="text-xs text-gray-500 mt-0.5">Track and review engineering timeline milestones and deployment phases</p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-3.5">
             {projectsData.map((project) => (
               <div 
                 key={project.id}
                 onClick={() => setActiveProjectId(project.id)}
                 className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm hover:border-black transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group"
               >
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-gray-50 rounded-xl text-gray-700 border border-gray-100 group-hover:bg-black group-hover:text-white transition-colors">
-                    <Briefcase size={22} />
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gray-50 rounded-xl text-gray-600 border border-gray-100 group-hover:bg-black group-hover:text-white group-hover:border-black transition-colors shrink-0">
+                    <Briefcase size={20} />
                   </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <h3 className="font-bold text-lg text-black group-hover:text-blue-600 transition-colors">{project.name}</h3>
-                      
-                      {/* Highlighted Status Badge */}
-                      <span className={`text-xs font-bold px-3 py-0.5 rounded-full border tracking-wide ${project.statusColor}`}>
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-bold text-base text-black group-hover:text-blue-600 transition-colors">{project.name}</h3>
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${project.statusColor}`}>
                         {project.status}
                       </span>
-                      
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${project.priorityColor}`}>
-                        {project.priority} Prio
-                      </span>
                     </div>
-                    <p className="text-sm text-gray-500 space-x-4">
-                      <span><strong>Lead:</strong> {project.manager}</span>
-                      <span>•</span>
-                      <span><strong>Deadline:</strong> {project.deadline}</span>
-                    </p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+                      <p>Lead: <span className="text-gray-700 font-semibold">{project.manager}</span></p>
+                      <span className="hidden sm:inline text-gray-200">•</span>
+                      <p>Deadline: <span className="text-gray-700 font-semibold">{project.deadline}</span></p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Progress bar state visualization based on system status */}
-                <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
-                  <div className="w-full md:w-44 space-y-1">
+                {/* Progress bar state visualization */}
+                <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-gray-50">
+                  <div className="w-full md:w-44 space-y-1.5">
                     <div className="flex justify-between text-xs font-bold text-gray-700">
-                      <span>Progress</span>
+                      <span className="text-gray-400 font-medium">Overall Progress</span>
                       <span>{project.progress}%</span>
                     </div>
                     <div className="w-full bg-gray-100 h-2 border border-gray-200 rounded-full overflow-hidden">
@@ -168,7 +164,7 @@ export default function ProjectsPage() {
                       ></div>
                     </div>
                   </div>
-                  <ChevronRight size={20} className="text-gray-400 group-hover:text-black group-hover:translate-x-1 transition-all hidden md:block" />
+                  <ChevronRight size={18} className="text-gray-400 group-hover:text-black group-hover:translate-x-0.5 transition-all hidden md:block" />
                 </div>
               </div>
             ))}
@@ -181,49 +177,46 @@ export default function ProjectsPage() {
         <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden animate-in fade-in duration-200">
           
           {/* Header Block */}
-          <div className="p-6 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/50">
-            <div>
-              <button 
-                onClick={() => setActiveProjectId(null)}
-                className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-black mb-3 transition-colors"
-              >
-                <ArrowLeft size={14} /> Back to Project List
-              </button>
-              <div className="flex items-center gap-3 mb-2">
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full border tracking-wide ${currentProject?.statusColor}`}>
-                  {currentProject?.status}
-                </span>
-                <h2 className="text-2xl font-bold text-black">{currentProject?.name}</h2>
+          <div className="p-6 border-b border-gray-200 bg-gray-50/50 space-y-4">
+            <button 
+              onClick={() => setActiveProjectId(null)}
+              className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-black transition-colors"
+            >
+              <ArrowLeft size={14} /> Back to Project List
+            </button>
+            
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h2 className="text-2xl font-bold text-black tracking-tight">{currentProject?.name}</h2>
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${currentProject?.statusColor}`}>
+                    {currentProject?.status}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                  <p>Project Manager: <span className="text-black font-semibold">{currentProject?.manager}</span></p>
+                  <span className="text-gray-200 hidden sm:inline">•</span>
+                  <p>Target Deadline: <span className="text-black font-semibold">{currentProject?.deadline}</span></p>
+                </div>
               </div>
-              <p className="text-sm text-gray-500 flex items-center gap-4">
-                <span><strong>Manager:</strong> {currentProject?.manager}</span>
-                <span><strong>Deadline:</strong> {currentProject?.deadline}</span>
-              </p>
-            </div>
-            <div className="flex gap-3">
-               <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors">
-                 <MessageSquare size={16} /> Contact Team
-               </button>
-               <button className="flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-semibold border border-black rounded-lg hover:bg-gray-800 transition-colors">
-                 <Upload size={16} /> Upload Assets
-               </button>
             </div>
           </div>
 
           {/* Progress Section */}
-          <div className="p-6 border-b border-gray-200">
-             <div className="flex justify-between items-end mb-2">
-               <h3 className="font-bold text-black">Overall Progress</h3>
+          <div className="p-6 border-b border-gray-200 space-y-4">
+             <div className="flex justify-between items-end">
+               <h3 className="font-bold text-sm text-black uppercase tracking-wider">Milestone Progress Track</h3>
                <span className="text-2xl font-bold text-blue-600">{currentProject?.progress}%</span>
              </div>
-             <div className="w-full bg-gray-100 h-3 border border-gray-200 rounded-full overflow-hidden">
+             <div className="w-full bg-gray-100 h-2.5 border border-gray-200 rounded-full overflow-hidden">
                <div 
-                 className={`h-full rounded-full ${currentProject?.status === "Rejected" ? "bg-red-500" : currentProject?.status === "Completed" ? "bg-green-600" : "bg-blue-600"}`} 
+                 className={`h-full rounded-full transition-all duration-500 ${currentProject?.status === "Rejected" ? "bg-red-500" : currentProject?.status === "Completed" ? "bg-green-600" : "bg-blue-600"}`} 
                  style={{ width: `${currentProject?.progress}%` }}
                ></div>
              </div>
              
-             <div className="grid grid-cols-5 gap-2 mt-4 text-xs font-semibold text-center text-gray-500">
+             {/* Dynamic workflow pipeline steps indicators */}
+             <div className="grid grid-cols-5 gap-2 pt-2 text-[11px] font-bold text-center text-gray-400">
                 <div className="text-black border-t-2 border-black pt-2">Planning</div>
                 <div className="text-black border-t-2 border-black pt-2">UI Design</div>
                 <div className={`${currentProject?.status === "Rejected" ? "text-red-600 border-red-500" : "text-blue-600 border-blue-600"} border-t-2 pt-2`}>
@@ -235,89 +228,28 @@ export default function ProjectsPage() {
           </div>
 
           {/* Sub-Layout columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
-            <div className="lg:col-span-2 p-6 space-y-8">
-              
-              {currentProject?.status === "Rejected" ? (
-                <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-                   <h4 className="text-sm font-bold text-red-900 mb-1 flex items-center gap-2">
-                     <XCircle size={16} /> Project Terminated / Rejected
-                   </h4>
-                   <p className="text-sm text-red-800">
+          <div className="p-6 bg-white">
+            {currentProject?.status === "Rejected" ? (
+              <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-start gap-3">
+                 <XCircle size={16} className="text-red-600 mt-0.5 shrink-0" />
+                 <div className="space-y-1">
+                   <h4 className="text-xs font-bold text-red-900 uppercase tracking-wider">Project Terminated / Rejected</h4>
+                   <p className="text-xs text-red-800 leading-relaxed">
                      Development pipeline on this initiative has been discontinued. Please contact your account representative to review strategy amendments.
                    </p>
-                </div>
-              ) : (
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                   <h4 className="text-sm font-bold text-blue-900 mb-1 flex items-center gap-2">
-                     <AlertCircle size={16} /> Current Focus
-                   </h4>
-                   <p className="text-sm text-blue-800">
-                     Frontend development is ongoing. Login system completed. <strong>Next: Payment integration.</strong>
+                 </div>
+              </div>
+            ) : (
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-start gap-3">
+                 <AlertCircle size={16} className="text-blue-600 mt-0.5 shrink-0" />
+                 <div className="space-y-1">
+                   <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider">Current Focus Status</h4>
+                   <p className="text-xs text-blue-800 leading-relaxed">
+                     Frontend architecture builds are currently active. Authentication login systems completed. <strong className="text-blue-900">Next Sprint: Payment gateway loop integration pipelines.</strong>
                    </p>
-                </div>
-              )}
-
-              <div>
-                <h3 className="font-bold text-lg mb-4 text-black">Project Milestones</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="text-green-600" size={20} />
-                      <div>
-                        <h4 className="font-bold text-sm text-black">Milestone 1: UI/UX Design</h4>
-                        <p className="text-xs text-gray-500">Completed on May 15</p>
-                      </div>
-                    </div>
-                    <button className="text-sm font-semibold border border-gray-300 px-3 py-1 rounded-md hover:bg-gray-100 transition-colors">View Files</button>
-                  </div>
-
-                  {currentProject?.status !== "Rejected" && (
-                    <div className="flex items-center justify-between p-4 border border-blue-200 bg-blue-50/30 shadow-sm relative overflow-hidden rounded-lg">
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-l-lg"></div>
-                      <div className="flex items-center gap-3 pl-2">
-                        <Clock className="text-blue-600" size={20} />
-                        <div>
-                          <h4 className="font-bold text-sm text-black">Milestone 2: Frontend Auth Module</h4>
-                          <p className="text-xs text-blue-600 font-medium">Client Approval Required</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button className="text-sm font-semibold border border-red-200 text-red-600 px-3 py-1 bg-white rounded-md hover:bg-red-50 transition-colors">Reject</button>
-                        <button className="text-sm font-semibold border border-black bg-black text-white px-3 py-1 rounded-md hover:bg-gray-800 transition-colors">Approve Work</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                <button className="text-sm font-semibold px-4 py-2 border border-gray-300 bg-white rounded-lg hover:bg-gray-50 transition-colors">Request Change</button>
-                <button className="text-sm font-semibold px-4 py-2 border border-gray-300 bg-white rounded-lg hover:bg-gray-50 transition-colors">Request Update</button>
-                <button className="text-sm font-semibold px-4 py-2 border border-gray-300 bg-white rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
-                  <FileText size={16} /> Download Deliverables
-                </button>
-              </div>
-
-            </div>
-
-            {/* Right Column: Log */}
-            <div className="p-6 bg-gray-50/50">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-black">Activity Log</h3>
-                <MoreVertical size={16} className="text-gray-400 cursor-pointer" />
-              </div>
-              
-              <div className="space-y-6 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-gray-200 before:to-transparent">
-                <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                  <div className="flex items-center justify-center w-5 h-5 border border-white bg-blue-500 text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 rounded-full"></div>
-                  <div className="w-[calc(100%-2rem)] md:w-[calc(50%-1.5rem)] bg-white p-3 border border-gray-200 shadow-sm rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">Today, 10:42 AM</p>
-                    <p className="text-sm font-medium text-black">Status updated to {currentProject?.status}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+                 </div>
+              </div>  
+            )}
           </div>
         </div>
       )}
