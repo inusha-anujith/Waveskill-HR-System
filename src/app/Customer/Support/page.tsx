@@ -1,293 +1,300 @@
 "use client";
 
 import { useState } from 'react';
+import CustomerNavi from '../../../components/CustomerNavi/CustomerNavi';
+import CustomerTabs from '../../../components/CustomerNavi/CustomerTabs';
+
 import { 
-  Mail, 
   Phone, 
-  MessageCircle, 
-  MapPin, 
   Clock, 
-  Info, 
   HelpCircle, 
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp
+  Mail, 
+  MessageSquare, 
+  MapPin, 
+  AlertTriangle, 
+  ChevronDown, 
+  ChevronUp, 
+  ExternalLink 
 } from 'lucide-react';
 
-export default function SupportPage() {
-  // Navigation tabs state switcher
-  const [activeTab, setActiveTab] = useState<'contact' | 'hours' | 'help' | 'faq'>('contact');
+type SupportTab = 'CONTACT US' | 'WORKING HOURS' | 'HELP INFO' | 'FAQ';
 
-  // Interactive state tracking array for individual FAQ accordion clicks
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+export default function CustomerSupportPage() {
+  const [activeTab, setActiveTab] = useState<SupportTab>('CONTACT US');
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
-  // Static FAQ dataset
+  const handleLogout = () => {
+    alert("Logged out!");
+  };
+
+  const toggleFaq = (index: number) => {
+    setExpandedFaq(expandedFaq === index ? null : index);
+  };
+
   const faqs = [
     { 
       q: "How do I reset password?", 
-      a: "Go to your Account Profile settings page, open the Security section tab panel, input your alternative secret characters, and select save changes." 
+      a: "Navigate to the Profile section tab, select 'Change Password' from the left sidebar interface configuration panel, provide your validation keys, and save changes." 
     },
     { 
       q: "How do I contact support?", 
-      a: "You can reach us instantly via our direct support mailbox at support@company.com or via WhatsApp chat link parameters during regular operational cycles." 
+      a: "You can open an automated email matrix stream using our support channel parameters or call the baseline office line directly listed on the 'Contact Us' tab panel parameters." 
     },
     { 
       q: "How do I check my project status?", 
-      a: "Open up the central Projects module workspace navigation panel tab. Every initiative features live indicators mapping progress values explicitly." 
+      a: "Your primary telemetry records are mapped on the 'Projects' main workspace interface layer. Click any project container layout element to launch milestone deep dives." 
     },
     { 
       q: "What if I find a bug?", 
-      a: "Please capture comprehensive layout screenshots highlighting your dashboard console log files and dispatch them over to our email helpdesk line." 
+      a: "Please take comprehensive high-resolution terminal snapshot logs or console dump details and upload them directly via your communications sync matrix links or email arrays." 
     }
   ];
 
-  const toggleFaq = (index: number) => {
-    setOpenFaqIndex(openFaqIndex === index ? null : index);
-  };
-
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      
-      {/* --- TOP BRAND HEADER BLOCKS --- */}
-      <div className="px-1">
-        <h1 className="text-2xl font-bold text-black">Support Center</h1>
-        <p className="text-sm text-gray-500">Need deployment or layout alignment help? Explore quick channels here</p>
-      </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10">
+      {/* Imported Shared Navigation */}
+      <CustomerNavi 
+        customerName="Customer User" 
+        role="user" 
+        onLogout={handleLogout} 
+      />
+      <CustomerTabs activeTab="Support" />
 
-      {/* --- CLEAN VERY SIMPLE NAVBAR TABS --- */}
-      <div className="bg-white border border-gray-200 p-1.5 rounded-xl shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-1">
-        <button 
-          onClick={() => setActiveTab('contact')}
-          className={`flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'contact' ? 'bg-black text-white' : 'text-gray-500 hover:text-black hover:bg-gray-50'}`}
-        >
-          <Phone size={14} /> Contact Us
-        </button>
-        <button 
-          onClick={() => setActiveTab('hours')}
-          className={`flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'hours' ? 'bg-black text-white' : 'text-gray-500 hover:text-black hover:bg-gray-50'}`}
-        >
-          <Clock size={14} /> Working Hours
-        </button>
-        <button 
-          onClick={() => setActiveTab('help')}
-          className={`flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'help' ? 'bg-black text-white' : 'text-gray-500 hover:text-black hover:bg-gray-50'}`}
-        >
-          <Info size={14} /> Help Info
-        </button>
-        <button 
-          onClick={() => setActiveTab('faq')}
-          className={`flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'faq' ? 'bg-black text-white' : 'text-gray-500 hover:text-black hover:bg-gray-50'}`}
-        >
-          <HelpCircle size={14} /> FAQ
-        </button>
-      </div>
-
-      {/* --- RE-ARRANGED DYNAMIC CORE CONTROLLER VIEWPORT --- */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 min-h-[340px]">
+      {/* Main Dashboard Content */}
+      <main className="p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col gap-6">
         
-        {/* ================= SECTION 1: 📞 CONTACT US CHANNELS ================= */}
-        {activeTab === 'contact' && (
-          <div className="space-y-6 animate-in fade-in duration-150">
-            <div>
-              <h3 className="text-lg font-bold text-black">Get In Touch</h3>
-              <p className="text-sm text-gray-500">Pick your preferred contact method to connect directly with our studio engine</p>
-            </div>
+        {/* Support Title Header Area */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Support Center</h1>
+          <p className="text-sm text-gray-400 mt-1">
+            Need deployment or layout alignment help? Explore quick channels here
+          </p>
+        </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Email Gateway channel box */}
-              <div className="border border-gray-200 bg-gray-50/30 p-5 rounded-xl space-y-2">
-                <div className="flex items-center gap-2 text-black font-bold text-sm">
-                  <Mail size={16} className="text-gray-700" />
-                  <h4>Email Support</h4>
-                </div>
-                <p className="text-lg font-bold text-blue-600">support@company.com</p>
-                <p className="text-xs text-gray-400 font-medium">“We reply within 24 hours”</p>
+        {/* Central Switchboard Navigation Bar Wrapper */}
+        <div className="bg-white border border-gray-200 rounded-xl p-1.5 shadow-sm grid grid-cols-2 md:flex md:items-center justify-between gap-1">
+          {(['CONTACT US', 'WORKING HOURS', 'HELP INFO', 'FAQ'] as SupportTab[]).map((tab) => {
+            const getIcon = () => {
+              if (tab === 'CONTACT US') return <Phone size={14} />;
+              if (tab === 'WORKING HOURS') return <Clock size={14} />;
+              if (tab === 'HELP INFO') return <HelpCircle size={14} />;
+              return <HelpCircle size={14} />;
+            };
+
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase transition-all duration-200 ${
+                  activeTab === tab
+                    ? 'bg-black text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                } md:flex-1`}
+              >
+                {getIcon()}
+                {tab}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* INNER CONTAINER: DISPLAY DYNAMICS CHANNELS BASED ON ACTIVE SELECTION */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm min-h-[380px] flex flex-col justify-between">
+          
+          {/* TAB CONTENT 1: CONTACT US (Ref: 1.5.png) */}
+          {activeTab === 'CONTACT US' && (
+            <div className="flex flex-col gap-6 animate-fadeIn">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Get In Touch</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Pick your preferred contact method to connect directly with our studio engine</p>
               </div>
 
-              {/* Phone Line channel box */}
-              <div className="border border-gray-200 bg-gray-50/30 p-5 rounded-xl space-y-2">
-                <div className="flex items-center gap-2 text-black font-bold text-sm">
-                  <Phone size={16} className="text-gray-700" />
-                  <h4>Phone Support</h4>
-                </div>
-                <p className="text-lg font-bold text-black">+94 11 234 5678</p>
-                <p className="text-xs text-gray-400 font-medium">“Available during working hours”</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              {/* Action Button: WhatsApp Integration channel */}
-              <div className="border border-gray-200 bg-gray-50/30 p-5 rounded-xl flex flex-col justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-black font-bold text-sm">
-                    <MessageCircle size={16} className="text-green-600" />
-                    <h4>WhatsApp Chat</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Email Panel */}
+                <div className="border border-gray-100 bg-[#F8FAFC]/50 p-5 rounded-2xl flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
+                    <Mail size={16} />
+                    <span>Email Support</span>
                   </div>
-                  <p className="text-xs text-gray-500">Instant developer messaging channel link access protocol.</p>
+                  <a href="mailto:support@company.com" className="text-blue-600 font-bold text-lg hover:underline mt-1 block">
+                    support@company.com
+                  </a>
+                  <p className="text-xs text-gray-400 mt-0.5">“We reply within 24 hours”</p>
                 </div>
-                <a 
-                  href="https://wa.me/94112345678" 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg border border-green-700 shadow-sm text-center transition-colors flex items-center justify-center gap-2"
-                >
-                  <MessageCircle size={14} /> Chat on WhatsApp
-                </a>
-              </div>
 
-              {/* Action Button: Physical Office Location maps link */}
-              <div className="border border-gray-200 bg-gray-50/30 p-5 rounded-xl flex flex-col justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-black font-bold text-sm">
-                    <MapPin size={16} className="text-red-500" />
-                    <h4>Office Headquarters Location</h4>
+                {/* Phone Panel */}
+                <div className="border border-gray-100 bg-[#F8FAFC]/50 p-5 rounded-2xl flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
+                    <Phone size={16} />
+                    <span>Phone Support</span>
                   </div>
-                  <p className="text-xs text-gray-500 font-semibold text-black">100 Galle Road, Colombo 03, Sri Lanka</p>
+                  <p className="text-gray-900 font-bold text-lg mt-1">
+                    +94 11 234 5678
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">“Available during working hours”</p>
                 </div>
-                <a 
-                  href="https://maps.google.com" 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="bg-black hover:bg-gray-800 text-white text-xs font-bold px-4 py-2.5 rounded-lg border border-black shadow-sm text-center transition-colors flex items-center justify-center gap-2"
-                >
-                  <MapPin size={14} /> Google Maps Link
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* ================= SECTION 2: 🕒 WORKING HOURS TIMELINES ================= */}
-        {activeTab === 'hours' && (
-          <div className="space-y-5 animate-in fade-in duration-150">
-            <div>
-              <h3 className="text-lg font-bold text-black">Operational Schedule</h3>
-              <p className="text-sm text-gray-500">Track business timing boundaries before requesting immediate updates</p>
-            </div>
-
-            {/* Timetable card structure layout */}
-            <div className="border border-gray-200 rounded-xl bg-gray-50/40 divide-y divide-gray-200 text-sm overflow-hidden">
-              <div className="flex justify-between p-4 bg-white">
-                <span className="font-semibold text-gray-700">Monday – Friday</span>
-                <span className="font-bold text-black">9:00 AM – 6:00 PM</span>
-              </div>
-              <div className="flex justify-between p-4 bg-white">
-                <span className="font-semibold text-gray-700">Saturday</span>
-                <span className="font-bold text-black">9:00 AM – 1:00 PM</span>
-              </div>
-              <div className="flex justify-between p-4 bg-gray-50">
-                <span className="font-semibold text-gray-400">Sunday</span>
-                <span className="font-bold text-red-600 uppercase tracking-wider text-xs my-auto">Closed</span>
-              </div>
-            </div>
-
-            {/* Timing notice message banner */}
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500 font-medium leading-relaxed">
-              “Requests outside working hours will be answered next business day.”
-            </div>
-          </div>
-        )}
-
-        {/* ================= SECTION 3: ℹ️ HELP INFORMATION USER STEPS ================= */}
-        {activeTab === 'help' && (
-          <div className="space-y-5 animate-in fade-in duration-150">
-            <div>
-              <h3 className="text-lg font-bold text-black">How to Get Fast Support</h3>
-              <p className="text-sm text-gray-500">Follow these simple instructional steps to expedite issue resolution loops</p>
-            </div>
-
-            {/* Linear instructions list steps blocks mapping */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 border border-gray-100 rounded-xl bg-gray-50/50 flex gap-3">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-black text-white font-bold text-xs shrink-0">1</span>
-                <div>
-                  <h4 className="font-bold text-sm text-black mb-0.5">Check FAQ Panel</h4>
-                  <p className="text-xs text-gray-500">Review common questions instantly in the next tab before writing code flags.</p>
+                {/* WhatsApp Panel */}
+                <div className="border border-gray-100 bg-[#F8FAFC]/50 p-5 rounded-2xl flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
+                    <MessageSquare size={16} />
+                    <span>WhatsApp Chat</span>
+                  </div>
+                  <p className="text-xs text-gray-400">Instant developer messaging channel link access protocol.</p>
+                  <button onClick={() => window.open('https://wa.me/', '_blank')} className="w-full bg-[#00A884] text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 mt-1 hover:bg-[#009675] transition-colors">
+                    <MessageSquare size={14} /> Chat on WhatsApp
+                  </button>
                 </div>
-              </div>
 
-              <div className="p-4 border border-gray-100 rounded-xl bg-gray-50/50 flex gap-3">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-black text-white font-bold text-xs shrink-0">2</span>
-                <div>
-                  <h4 className="font-bold text-sm text-black mb-0.5">Select Communication Channel</h4>
-                  <p className="text-xs text-gray-500">Contact our core design center team either via direct email or WhatsApp text options.</p>
-                </div>
-              </div>
-
-              <div className="p-4 border border-gray-100 rounded-xl bg-gray-50/50 flex gap-3">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-black text-white font-bold text-xs shrink-0">3</span>
-                <div>
-                  <h4 className="font-bold text-sm text-black mb-0.5">Clarify Anomaly Clearly</h4>
-                  <p className="text-xs text-gray-500">Mention exact environment parameters where unexpected layouts trigger details.</p>
-                </div>
-              </div>
-
-              <div className="p-4 border border-gray-100 rounded-xl bg-gray-50/50 flex gap-3">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-black text-white font-bold text-xs shrink-0">4</span>
-                <div>
-                  <h4 className="font-bold text-sm text-black mb-0.5">Attach Proof Files</h4>
-                  <p className="text-xs text-gray-500">Include layout screenshots or desktop terminal stack output logs as clear references.</p>
+                {/* HQ Location Panel */}
+                <div className="border border-gray-100 bg-[#F8FAFC]/50 p-5 rounded-2xl flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
+                    <MapPin size={16} />
+                    <span>Office Headquarters Location</span>
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">100 Galle Road, Colombo 03, Sri Lanka</p>
+                  <button onClick={() => window.open('https://maps.google.com', '_blank')} className="w-full bg-black text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 mt-1 hover:bg-gray-900 transition-colors">
+                    <MapPin size={14} /> Google Maps Link
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ================= SECTION 4: 📚 FAQ ACCORDIONS WIDGET ================= */}
-        {activeTab === 'faq' && (
-          <div className="space-y-4 animate-in fade-in duration-150">
-            <div>
-              <h3 className="text-lg font-bold text-black">Frequently Asked Questions</h3>
-              <p className="text-sm text-gray-500">Click individual questions below to expand instant resolution answers</p>
+          {/* TAB CONTENT 2: WORKING HOURS (Ref: 1.6.png) */}
+          {activeTab === 'WORKING HOURS' && (
+            <div className="flex flex-col gap-6 animate-fadeIn">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Operational Schedule</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Track business timing boundaries before requesting immediate updates</p>
+              </div>
+
+              <div className="border border-gray-100 rounded-2xl overflow-hidden bg-white">
+                {/* Weekdays Row */}
+                <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+                  <span className="text-sm font-bold text-gray-700">Monday – Friday</span>
+                  <span className="text-sm font-bold text-gray-900">9:00 AM – 6:00 PM</span>
+                </div>
+                {/* Saturday Row */}
+                <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+                  <span className="text-sm font-bold text-gray-700">Saturday</span>
+                  <span className="text-sm font-bold text-gray-900">9:00 AM – 1:00 PM</span>
+                </div>
+                {/* Sunday Row */}
+                <div className="flex justify-between items-center px-6 py-4 bg-gray-50/50">
+                  <span className="text-sm font-bold text-gray-400">Sunday</span>
+                  <span className="text-sm font-bold text-red-500 uppercase tracking-wide">Closed</span>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 mt-2">
+                <p className="text-xs text-gray-400 italic text-center">
+                  “Requests outside working hours will be answered next business day.”
+                </p>
+              </div>
             </div>
+          )}
 
-            {/* Click Expandable Accordion Loops */}
-            <div className="space-y-2 pt-2">
-              {faqs.map((faq, idx) => {
-                const isOpen = openFaqIndex === idx;
-                return (
-                  <div 
-                    key={idx} 
-                    className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm transition-all"
-                  >
-                    <button 
-                      onClick={() => toggleFaq(idx)}
-                      className="w-full flex justify-between items-center px-4 py-3 text-left font-bold text-sm text-black hover:bg-gray-50 transition-colors"
+          {/* TAB CONTENT 3: HELP INFO (Ref: 1.7.png) */}
+          {activeTab === 'HELP INFO' && (
+            <div className="flex flex-col gap-6 animate-fadeIn">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">How to Get Fast Support</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Follow these simple instructional steps to expedite issue resolution loops</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Block 1 */}
+                <div className="border border-gray-100 rounded-2xl p-5 flex gap-4 bg-white">
+                  <div className="w-6 h-6 rounded-full bg-black text-white font-bold text-xs flex items-center justify-center shrink-0">1</div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900">Check FAQ Panel</h4>
+                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">Review common questions instantly in the next tab before writing code flags.</p>
+                  </div>
+                </div>
+                {/* Block 2 */}
+                <div className="border border-gray-100 rounded-2xl p-5 flex gap-4 bg-white">
+                  <div className="w-6 h-6 rounded-full bg-black text-white font-bold text-xs flex items-center justify-center shrink-0">2</div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900">Select Communication Channel</h4>
+                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">Contact our core design center team either via direct email or WhatsApp text options.</p>
+                  </div>
+                </div>
+                {/* Block 3 */}
+                <div className="border border-gray-100 rounded-2xl p-5 flex gap-4 bg-white">
+                  <div className="w-6 h-6 rounded-full bg-black text-white font-bold text-xs flex items-center justify-center shrink-0">3</div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900">Clarify Anomaly Clearly</h4>
+                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">Mention exact environment parameters where unexpected layouts trigger details.</p>
+                  </div>
+                </div>
+                {/* Block 4 */}
+                <div className="border border-gray-100 rounded-2xl p-5 flex gap-4 bg-white">
+                  <div className="w-6 h-6 rounded-full bg-black text-white font-bold text-xs flex items-center justify-center shrink-0">4</div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900">Attach Proof Files</h4>
+                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">Include layout screenshots or desktop terminal stack output logs as clear references.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB CONTENT 4: FAQ ACCORDION PANEL (Ref: 1.8.png) */}
+          {activeTab === 'FAQ' && (
+            <div className="flex flex-col gap-6 animate-fadeIn">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Frequently Asked Questions</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Click individual questions below to expand instant resolution answers</p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {faqs.map((faq, index) => (
+                  <div key={index} className="border border-gray-200 rounded-xl overflow-hidden bg-white transition-all">
+                    <button
+                      onClick={() => toggleFaq(index)}
+                      className="w-full text-left px-5 py-4 flex justify-between items-center gap-4 hover:bg-gray-50 transition-colors"
                     >
-                      <span className="flex items-center gap-2">
-                        <HelpCircle size={15} className="text-blue-500 shrink-0" /> {faq.q}
-                      </span>
-                      {isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+                      <div className="flex items-center gap-3">
+                        <HelpCircle size={16} className="text-blue-500 shrink-0" />
+                        <span className="text-sm font-bold text-gray-900">{faq.q}</span>
+                      </div>
+                      {expandedFaq === index ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
                     </button>
                     
-                    {isOpen && (
-                      <div className="px-4 pb-4 pt-1 text-xs text-gray-600 leading-relaxed pl-9 bg-gray-50/30 animate-in slide-in-from-top-2 duration-150">
-                        {faq.a}
+                    {expandedFaq === index && (
+                      <div className="px-5 pb-4 pt-1 border-t border-gray-100 bg-gray-50/50">
+                        <p className="text-xs text-gray-500 leading-relaxed pl-7">
+                          {faq.a}
+                        </p>
                       </div>
                     )}
                   </div>
-                );
-              })}
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* BOTTOM RED PANIC ALIGNMENT: URGENT SYSTEMS EMERGENCY BAR */}
+        <div className="border border-red-200 bg-[#FFF5F5] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm mt-2">
+          <div className="flex items-start gap-3 text-center sm:text-left">
+            <AlertTriangle size={18} className="text-red-600 mt-0.5 shrink-0 mx-auto sm:mx-0" />
+            <div>
+              <h4 className="text-xs font-extrabold text-red-900 uppercase tracking-wider">Urgent Systems Emergency?</h4>
+              <p className="text-xs text-red-700 mt-0.5">Critical dashboard runtime loops or complete staging crashes? Call directly.</p>
             </div>
           </div>
-        )}
-
-      </div>
-
-      {/* --- 🚨 EMERGENCY SUPPORT FOOTER BANNER BOX (Always Visible at Base) --- */}
-      <div className="bg-red-50/40 border border-red-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex gap-3 items-start">
-          <AlertTriangle size={18} className="text-red-600 mt-0.5 shrink-0" />
-          <div>
-            <h4 className="text-sm font-bold text-red-900">Urgent Systems Emergency?</h4>
-            <p className="text-xs text-red-800">Critical dashboard runtime loops or complete staging crashes? Call directly.</p>
-          </div>
+          <a 
+            href="tel:+94779998888" 
+            className="bg-white border border-red-200 px-5 py-2 rounded-xl text-xs font-extrabold text-red-600 shadow-sm hover:bg-red-50/50 transition-colors whitespace-nowrap"
+          >
+            Hotline: +94 77 999 8888
+          </a>
         </div>
-        <p className="text-sm font-bold text-red-700 bg-white border border-red-200 px-3 py-1 rounded-lg shadow-sm whitespace-nowrap">
-          Hotline: +94 77 999 8888
-        </p>
-      </div>
 
+      </main>
     </div>
   );
 }

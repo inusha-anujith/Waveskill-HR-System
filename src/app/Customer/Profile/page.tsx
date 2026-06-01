@@ -1,247 +1,207 @@
 "use client";
 
-import { useState, useRef } from 'react';
-import { 
-  User, 
-  Lock, 
-  Building, 
-  Camera, 
-  CheckCircle2,
-  AlertTriangle
-} from 'lucide-react';
+import { useState } from 'react';
+import CustomerNavi from '../../../components/CustomerNavi/CustomerNavi';
+import CustomerTabs from '../../../components/CustomerNavi/CustomerTabs';
 
-export default function ProfilePage() {
-  // Navigation active tab switcher (Simplified to 3 explicit views)
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'company'>('profile');
-  
-  // Success alerts notification display toggles
-  const [profileSaved, setProfileSaved] = useState(false);
-  const [passwordSaved, setPasswordSaved] = useState(false);
-  
-  // Simple state for local image file preview handling
-  const [avatarImage, setAvatarImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+import { User, Lock, Building2 } from 'lucide-react';
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setAvatarImage(URL.createObjectURL(file));
-    }
-  };
+type ActiveSection = 'profile' | 'password' | 'company';
 
-  const handleProfileSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setProfileSaved(true);
-    setTimeout(() => setProfileSaved(false), 3000);
-  };
+export default function CustomerProfilePage() {
+  const [activeSection, setActiveSection] = useState<ActiveSection>('profile');
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordSaved(true);
-    setTimeout(() => setPasswordSaved(false), 3000);
+  const handleLogout = () => {
+    alert("Logged out!");
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      
-      {/* --- TOP PROFILE HEADER HERO BLOCK --- */}
-      <div className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
-          
-          {/* Avatar Picture frame with hidden form input action triggers */}
-          <div 
-            onClick={() => fileInputRef.current?.click()} 
-            className="relative group cursor-pointer shrink-0"
-          >
-            <div className="w-20 h-20 bg-gray-100 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 overflow-hidden font-bold text-xl">
-              {avatarImage ? (
-                <img src={avatarImage} alt="Profile preview" className="w-full h-full object-cover" />
-              ) : (
-                "KA"
-              )}
-            </div>
-            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera size={16} />
-            </div>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleAvatarChange} 
-              accept="image/*" 
-              className="hidden" 
-            />
-          </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10">
+      {/* Imported Shared Navigation */}
+      <CustomerNavi 
+        customerName="Customer User" 
+        role="user" 
+        onLogout={handleLogout} 
+      />
+      <CustomerTabs activeTab="Profile" />
 
+      {/* Main Dashboard Content */}
+      <main className="p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col gap-6">
+        
+        {/* Top Profile Summary Card */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex items-center gap-5">
+          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-lg border border-gray-200">
+            KA
+          </div>
           <div>
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-              <h2 className="text-2xl font-bold text-black">Kaushalya</h2>
-              <span className="bg-green-50 text-green-700 border border-green-200 text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900">Kaushalya</h1>
+              <span className="bg-[#E6F4EA] text-[#137333] font-bold text-[10px] tracking-wider px-2.5 py-0.5 rounded-full uppercase">
                 Active Client
               </span>
             </div>
-            <p className="text-sm text-gray-500">kaushalya@example.com • Colombo, Sri Lanka</p>
+            <p className="text-gray-500 text-sm mt-1">
+              kaushalya@example.com <span className="mx-1.5">•</span> Colombo, Sri Lanka
+            </p>
           </div>
         </div>
-        
-        {/* Quick Summary Metadata Indicator Block */}
-        
-      </div>
 
-      {/* --- SIDEBAR LAYOUT GRID FRAMEWORK --- */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-        
-        {/* Navigation Tab Bar Options Menu */}
-        <div className="bg-white border border-gray-200 p-2 rounded-xl shadow-sm space-y-1">
-          <button 
-            onClick={() => setActiveTab('profile')}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            <User size={16} /> Edit Profile
-          </button>
-          <button 
-            onClick={() => setActiveTab('security')}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'security' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            <Lock size={16} /> Change Password
-          </button>
-          <button 
-            onClick={() => setActiveTab('company')}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'company' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            <Building size={16} /> Company Info
-          </button>
-        </div>
-
-        {/* Dynamic Display Window Content Frame Panel */}
-        <div className="md:col-span-3 bg-white border border-gray-200 rounded-xl shadow-sm min-h-[380px]">
+        {/* Settings Workspace Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           
-          {/* ================= OPTION 1: EDIT PROFILE & CONTACT DETAILS ================= */}
-          {activeTab === 'profile' && (
-            <div className="p-6 space-y-6 animate-in fade-in duration-150">
-              <div>
-                <h3 className="text-lg font-bold text-black">Edit Profile Parameters</h3>
-                <p className="text-sm text-gray-500">Update your account identity and system contact records</p>
+          {/* Left Vertical Menu Tabs */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-2 shadow-sm md:col-span-3 flex flex-col gap-1 overflow-hidden">
+            <button 
+              onClick={() => setActiveSection('profile')}
+              className={`flex items-center gap-3 w-full px-4 py-3 text-sm font-bold rounded-xl transition-colors text-left ${
+                activeSection === 'profile' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <User size={16} className={activeSection === 'profile' ? 'text-white' : 'text-gray-400'} />
+              Edit Profile
+            </button>
+            <button 
+              onClick={() => setActiveSection('password')}
+              className={`flex items-center gap-3 w-full px-4 py-3 text-sm font-bold rounded-xl transition-colors text-left ${
+                activeSection === 'password' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Lock size={16} className={activeSection === 'password' ? 'text-white' : 'text-gray-400'} />
+              Change Password
+            </button>
+            <button 
+              onClick={() => setActiveSection('company')}
+              className={`flex items-center gap-3 w-full px-4 py-3 text-sm font-bold rounded-xl transition-colors text-left ${
+                activeSection === 'company' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Building2 size={16} className={activeSection === 'company' ? 'text-white' : 'text-gray-400'} />
+              Company Info
+            </button>
+          </div>
+
+          {/* Right Parameters Formulation Section */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm md:col-span-9">
+            
+            {/* CONDITIONAL CONTENT PANEL 1: EDIT PROFILE */}
+            {activeSection === 'profile' && (
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Edit Profile Parameters</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Update your account identity and system contact records
+                  </p>
+                </div>
+
+                <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); alert('Profile parameters updated successfully!'); }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">First Name</label>
+                      <input type="text" defaultValue="Kaushalya" className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Last Name</label>
+                      <input type="text" defaultValue="Client" className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Email Workspace</label>
+                      <input type="email" defaultValue="kaushalya@example.com" className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Contact Phone Number</label>
+                      <input type="text" defaultValue="+94 77 123 4567" className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end mt-2">
+                    <button type="submit" className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-900 transition-colors shadow-sm">
+                      Save Changes
+                    </button>
+                  </div>
+                </form>
               </div>
+            )}
 
-              {profileSaved && (
-                <div className="bg-green-50 border border-green-200 p-3.5 rounded-lg flex items-center gap-2.5 text-green-800 text-sm font-semibold animate-in zoom-in duration-150">
-                  <CheckCircle2 size={16} className="text-green-600" />
-                  <span>Profile contact configurations updated successfully!</span>
-                </div>
-              )}
-
-              <form onSubmit={handleProfileSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">First Name</label>
-                    <input required type="text" defaultValue="Kaushalya" className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-sm text-black focus:outline-none focus:border-black transition-colors" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Last Name</label>
-                    <input required type="text" defaultValue="Client" className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-sm text-black focus:outline-none focus:border-black transition-colors" />
-                  </div>
+            {/* CONDITIONAL CONTENT PANEL 2: CHANGE PASSWORD */}
+            {activeSection === 'password' && (
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Security Credentials</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Update your current password configuration to maintain account ecosystem health
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Email Workspace</label>
-                    <input required type="email" defaultValue="kaushalya@example.com" className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-sm text-black focus:outline-none focus:border-black transition-colors" />
+                <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); alert('Password successfully updated.'); }}>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Current Password</label>
+                    <input type="password" placeholder="••••••••••••" className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Contact Phone Number</label>
-                    <input required type="text" defaultValue="+94 77 123 4567" className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-sm text-black focus:outline-none focus:border-black transition-colors" />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">New Password</label>
+                      <input type="password" placeholder="Minimum 8 characters" className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Confirm New Password</label>
+                      <input type="password" placeholder="Re-enter new password" className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" />
+                    </div>
                   </div>
-                </div>
 
-                <div className="pt-4 border-t border-gray-100 flex justify-end">
-                  <button type="submit" className="bg-black text-white text-sm font-semibold px-5 py-2 rounded-lg border border-black hover:bg-gray-800 transition-colors">
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* ================= OPTION 2: CHANGE PASSWORD SECURITY BLOCK ================= */}
-          {activeTab === 'security' && (
-            <div className="p-6 space-y-6 animate-in fade-in duration-150">
-              <div>
-                <h3 className="text-lg font-bold text-black">Change Password</h3>
-                <p className="text-sm text-gray-500">Update your access credential codes regularly to maintain database lockdown safety</p>
+                  <div className="flex justify-end mt-2">
+                    <button type="submit" className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-900 transition-colors shadow-sm">
+                      Update Password
+                    </button>
+                  </div>
+                </form>
               </div>
+            )}
 
-              {passwordSaved && (
-                <div className="bg-green-50 border border-green-200 p-3.5 rounded-lg flex items-center gap-2.5 text-green-800 text-sm font-semibold animate-in zoom-in duration-150">
-                  <CheckCircle2 size={16} className="text-green-600" />
-                  <span>Security access key updated successfully!</span>
-                </div>
-              )}
-
-              <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Current Secret Password</label>
-                  <input required type="password" placeholder="••••••••" className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-sm text-black focus:outline-none focus:border-black transition-colors" />
+            {/* CONDITIONAL CONTENT PANEL 3: COMPANY INFO */}
+            {activeSection === 'company' && (
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Organization Infrastructure</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Manage corporate baseline parameters associated with your client ecosystem workspace
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">New Selection Password</label>
-                    <input required type="password" placeholder="Minimum 8 characters" className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-sm text-black focus:outline-none focus:border-black transition-colors" />
+                <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); alert('Company metrics saved.'); }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Company Name</label>
+                      <input type="text" defaultValue="Apex Digital Studios" className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Corporate Website</label>
+                      <input type="text" defaultValue="https://apexstudios.com" className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" />
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Confirm New Selection Password</label>
-                    <input required type="password" placeholder="Match new field exactly" className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-sm text-black focus:outline-none focus:border-black transition-colors" />
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Headquarters Address</label>
+                    <input type="text" defaultValue="128 Galle Road, Colombo 03, Sri Lanka" className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" />
                   </div>
-                </div>
 
-                <div className="pt-4 border-t border-gray-100 flex justify-end">
-                  <button type="submit" className="bg-black text-white text-sm font-semibold px-5 py-2 rounded-lg border border-black hover:bg-gray-800 transition-colors">
-                    Update Password
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* ================= OPTION 3: READ-ONLY COMPANY INFO OVERVIEW ================= */}
-          {activeTab === 'company' && (
-            <div className="p-6 space-y-5 animate-in fade-in duration-150">
-              <div>
-                <h3 className="text-lg font-bold text-black">Company Profiles Reference</h3>
-                <p className="text-sm text-gray-500">Corporate verification parameters associated with your client profile workspace</p>
+                  <div className="flex justify-end mt-2">
+                    <button type="submit" className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-900 transition-colors shadow-sm">
+                      Save Organization Data
+                    </button>
+                  </div>
+                </form>
               </div>
+            )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                <div className="p-4 border border-gray-100 bg-gray-50/50 rounded-xl space-y-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Corporate Title Entity</span>
-                  <p className="text-sm font-bold text-black">Apex Studio Designs Ltd.</p>
-                </div>
-
-                <div className="p-4 border border-gray-100 bg-gray-50/50 rounded-xl space-y-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Business Registration ID</span>
-                  <p className="text-sm font-bold text-black">PV-00246810-LK</p>
-                </div>
-
-                <div className="p-4 border border-gray-100 bg-gray-50/50 rounded-xl space-y-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Headquarters Workplace Address</span>
-                  <p className="text-sm font-bold text-black">Galle Road, Colombo 03, Sri Lanka</p>
-                </div>
-
-                <div className="p-4 border border-gray-100 bg-gray-50/50 rounded-xl space-y-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contract Start Parameter</span>
-                  <p className="text-sm font-bold text-black">March 24, 2025</p>
-                </div>
-              </div>
-
-              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-[11px] text-gray-500 leading-relaxed">
-                ℹ️ <strong>Note:</strong> Company information variables are verified via legal project documents. To modify corporate mapping variables, please generate a direct operational request through our <strong>Support Center</strong> channels.
-              </div>
-            </div>
-          )}
+          </div>
 
         </div>
-      </div>
 
+      </main>
     </div>
   );
 }
