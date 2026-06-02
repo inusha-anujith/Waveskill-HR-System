@@ -9,7 +9,7 @@ import { User, Lock, Building2 } from 'lucide-react';
 
 type ActiveSection = 'profile' | 'password' | 'company';
 
-// Database එකෙන් එන Customer Data වල හැඩය
+// Structure of Customer Data coming from the Database
 interface CustomerProfile {
   firstName: string;
   lastName: string;
@@ -40,23 +40,23 @@ export default function CustomerProfilePage() {
   
   const [loading, setLoading] = useState<boolean>(true);
   
-  // 🔐 Password fields වලට අදාළ State
+  // 🔐 State for Password fields
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // 🔄 1. පිටුවට ආපු ගමන් Database එකෙන් Customer Data ඇදලා ගැනීම
+  // 🔄 1. Fetch Customer Data from the Database on initial page load
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        // ⚠️ සටහන: පස්සේ Auth හදපුවාම මේ URL එක සහ headers වෙනස් කරන්න පුළුවන්
+        // ⚠️ Note: This URL and headers can be modified later once Auth is implemented
         const response = await axios.get('http://localhost:5001/api/customer/profile');
         if (response.data) {
           setProfile(response.data);
         }
         setLoading(false);
       } catch (error) {
-        console.error("Profile දත්ත ලබාගැනීම අසාර්ථකයි:", error);
+        console.error("Failed to fetch profile data:", error);
         setLoading(false);
       }
     };
@@ -64,30 +64,30 @@ export default function CustomerProfilePage() {
     fetchProfileData();
   }, []);
 
-  // ✍️ Input Field එකක් වෙනස් වෙද්දී State එකට දාගන්න Function එක
+  // ✍️ Function to handle and update State when an Input Field changes
   const handleInputChange = (field: keyof CustomerProfile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
-  // 📤 2. Profile හෝ Company Info වෙනස් කරලා Save කරද්දී Backend එකට යැවීම
+  // 📤 2. Send updated Profile or Company Info to the Backend on save
   const handleSaveChanges = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const response = await axios.put('http://localhost:5001/api/customer/profile/update', profile);
       if (response.data.success) {
-        alert('ප්‍රොෆයිල් දත්ත සාර්ථකව යාවත්කාලීන වුණා! ✅');
+        alert('Profile data updated successfully! ✅');
       }
     } catch (error) {
-      console.error("Update කිරීම අසාර්ථකයි:", error);
-      alert('දත්ත සුරැකීමේදී ගැටලුවක් මතු වුණා.');
+      console.error("Update failed:", error);
+      alert('An error occurred while saving data.');
     }
   };
 
-  // 🔒 3. මුරපදය (Password) වෙනස් කිරීමේ Request එක
+  // 🔒 3. Request to change the password
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      alert("අලුත් මුරපද දෙක එකිනෙකට ගැලපෙන්නේ නැත!");
+      alert("The new passwords do not match!");
       return;
     }
 
@@ -97,14 +97,14 @@ export default function CustomerProfilePage() {
         newPassword
       });
       if (response.data.success) {
-        alert('මුරපදය සාර්ථකව වෙනස් කළා! 🔑');
+        alert('Password changed successfully! 🔑');
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
       }
     } catch (error) {
       console.error("Password update error:", error);
-      alert('Password එක වෙනස් කරන්න බැරි වුණා. වත්මන් Password එක නිවැරදිදැයි බලන්න.');
+      alert('Failed to update password. Please check if your current password is correct.');
     }
   };
 
@@ -112,7 +112,7 @@ export default function CustomerProfilePage() {
     alert("Logged out!");
   };
 
-  // නමේ මුල් අකුරු දෙක Avatar එකට ගන්න (උදා: Kaushalya Client -> KC)
+  // Extract the first two initials for the Avatar (e.g., Kaushalya Client -> KC)
   const getInitials = () => {
     const first = profile.firstName ? profile.firstName.charAt(0) : 'K';
     const last = profile.lastName ? profile.lastName.charAt(0) : 'A';

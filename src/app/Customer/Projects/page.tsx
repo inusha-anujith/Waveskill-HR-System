@@ -16,7 +16,7 @@ import {
   Info 
 } from 'lucide-react';
 
-// MongoDB Database එකෙන් එන දත්ත වල හැඩය (Interface)
+// Structure of data coming from the MongoDB database (Interface)
 interface Project {
   _id: string; // MongoDB ID
   name: string;
@@ -27,7 +27,7 @@ interface Project {
   currentFocus?: string;
 }
 
-// Dashboard එකේ උඩම තියෙන Stats Cards වලට අදාළ Interface
+// Interface for the top Stats Cards displayed on the dashboard
 interface Stats {
   all: number;
   completed: number;
@@ -41,7 +41,7 @@ export default function CustomerProjectsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // 🔄 1. Database එකෙන් දත්ත ඇදලා ගැනීම
+  // 🔄 1. Fetch project data from the Database
   useEffect(() => {
     const fetchProjectsData = async () => {
       try {
@@ -52,7 +52,7 @@ export default function CustomerProjectsPage() {
         }
         setLoading(false);
       } catch (error) {
-        console.error("Projects ඩේටා ලබාගන්න බැරි වුණා:", error);
+        console.error("Failed to retrieve projects data:", error);
         setLoading(false);
       }
     };
@@ -64,17 +64,17 @@ export default function CustomerProjectsPage() {
     alert("Logged out!");
   };
 
-  // 🔍 ක්ලික් කරපු Project එක ලිස්ට් එකෙන් සොයා ගැනීම
+  // 🔍 Find the clicked project object from the projects list
   const currentProject = projects.find(p => p._id === selectedProjectId);
 
-  // 📅 Date එක ලස්සනට June 10, 2026 වගේ පෙන්වන්න හදන Function එකක්
+  // 📅 Function to format date strings into a readable format (e.g., June 10, 2026)
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  // 🎯 Progress එක අනුව Milestone එක තීරණය කරන හැටි
+  // 🎯 Function to determine the current operational milestone phase based on progress percentage
   const getMilestone = (progress: number) => {
     if (progress <= 20) return 'Planning';
     if (progress <= 40) return 'UI Design';

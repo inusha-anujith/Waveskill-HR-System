@@ -6,12 +6,12 @@ import CustomerNavi from '../../../components/CustomerNavi/CustomerNavi';
 import CustomerTabs from '../../../components/CustomerNavi/CustomerTabs';
 import { Briefcase, ArrowRight } from 'lucide-react';
 
-// Project එකක TypeScript interface එක (Type-safety සඳහා)
+// TypeScript interface for a Project (for type-safety)
 interface Project {
   _id: string;
   name: string;
   status: string;
-  progress: number; // උදා: 70
+  progress: number; // Example: 70
 }
 
 export default function CustomerHomePage() {
@@ -22,25 +22,25 @@ export default function CustomerHomePage() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // LocalStorage එකෙන් Login වෙද්දී සේව් වුණු Token එක ගන්නවා
+        // Retrieve the saved login token from LocalStorage
         const token = localStorage.getItem('token'); 
         
-        // ⚠️ Inusha හදපු Route URL එක මෙතනට දාන්න (දැනට මම '/api/customer/projects' කියලා දැම්මා)
+        // ⚠️ Note: Update this endpoint if the backend route changes (currently defaults to '/api/customer/projects')
         const response = await axios.get('http://localhost:5001/api/customer/projects', {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
 
-        // Back-end එකෙන් දත්ත ආවට පස්සේ ඒවා State වලට දානවා
+        // Map the received backend data to state
         if (response.data) {
-          // සාමාන්‍යයෙන් response එකේ user නම සහ projects ලිස්ට් එක එනවා
+          // The response typically returns a projects list and user info
           if (response.data.projects) setProjects(response.data.projects);
           if (response.data.user?.firstName) setCustomerName(response.data.user.firstName);
         }
         setLoading(false);
       } catch (error) {
-        console.error("Back-end එකෙන් Data ගන්න බැරි වුණා:", error);
+        console.error("Failed to fetch dashboard data from backend:", error);
         setLoading(false);
       }
     };
@@ -49,9 +49,9 @@ export default function CustomerHomePage() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Token එක clear කරනවා
+    localStorage.removeItem('token'); // Clear the session token
     alert("Logged out!");
-    window.location.href = "/login"; // Login පිටුවට පිටත් කරනවා
+    window.location.href = "/login"; // Redirect to the login page
   };
 
   return (
@@ -101,18 +101,18 @@ export default function CustomerHomePage() {
           {/* Project List */}
           <div className="flex flex-col gap-4">
             
-            {/* Loading එකක් පෙන්නනවා Data එනකල් */}
+            {/* Display loader while projects are fetching */}
             {loading ? (
               <div className="text-center py-6 text-sm text-gray-500 animate-pulse">
                 Loading ongoing projects...
               </div>
             ) : projects.length === 0 ? (
-              // Projects මුකුත්ම නැත්නම් පෙන්වන UI එක
+              // Empty UI shown if no projects exist
               <div className="text-center py-8 text-sm text-gray-400 border border-dashed border-gray-200 rounded-xl">
                 No active projects found at the moment.
               </div>
             ) : (
-              // 🔄 Back-end එකෙන් එන Projects ටික map කරලා ලස්සනට පෙන්වනවා
+              // 🔄 Map and display fetched backend project instances
               projects.map((project) => (
                 <div key={project._id} className="flex items-center gap-4 p-4 border border-gray-100 rounded-xl hover:bg-gray-50/50 transition-colors">
                   <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-600">
