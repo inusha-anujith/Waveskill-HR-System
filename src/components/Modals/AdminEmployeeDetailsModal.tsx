@@ -7,9 +7,10 @@ interface AdminEmployeeDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   employee: any | null;
+  onResetPassword?: (id: string) => void;
 }
 
-export default function AdminEmployeeDetailsModal({ isOpen, onClose, employee }: AdminEmployeeDetailsModalProps) {
+export default function AdminEmployeeDetailsModal({ isOpen, onClose, employee, onResetPassword }: AdminEmployeeDetailsModalProps) {
   if (!isOpen || !employee) return null;
 
   const getRoleBadge = (role: string) => {
@@ -144,10 +145,17 @@ export default function AdminEmployeeDetailsModal({ isOpen, onClose, employee }:
 
                 {/* Admin Quick Actions */}
                 <div className="space-y-3 pt-2">
-                  <button className="w-full bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold py-2.5 rounded-lg transition-colors">
+                  <button
+                    onClick={() => onResetPassword && onResetPassword(employee.id)}
+                    className="w-full bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold py-2.5 rounded-lg transition-colors"
+                  >
                     Reset Password
                   </button>
-                  <button className="w-full bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-semibold py-2.5 rounded-lg transition-colors">
+                  <button
+                    disabled
+                    title="Not implemented"
+                    className="w-full bg-white border border-red-200 text-red-300 text-xs font-semibold py-2.5 rounded-lg cursor-not-allowed opacity-60"
+                  >
                     Suspend Account
                   </button>
                 </div>
