@@ -1,43 +1,41 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import API from '@/utils/api'; // අපි හැදූ Axios instance එක
 import CustomerNavi from '../../../components/CustomerNavi/CustomerNavi';
 import CustomerTabs from '../../../components/CustomerNavi/CustomerTabs';
 import { Briefcase, ArrowRight } from 'lucide-react';
 
-// TypeScript interface for a Project (for type-safety)
 interface Project {
   _id: string;
-  name: string;
+  title?: string;
+  name?: string;
   status: string;
-  progress: number; // Example: 70
+  progress: number;
 }
 
 export default function CustomerHomePage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [customerName, setCustomerName] = useState<string>("Kaushalya");
+  const [customerName, setCustomerName] = useState<string>("Customer");
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Retrieve the saved login token from LocalStorage
-        const token = localStorage.getItem('token'); 
-        
-        // ⚠️ Note: Update this endpoint if the backend route changes (currently defaults to '/api/customer/projects')
-        const response = await axios.get('http://localhost:5001/api/customer/projects', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        // Map the received backend data to state
-        if (response.data) {
-          // The response typically returns a projects list and user info
-          if (response.data.projects) setProjects(response.data.projects);
-          if (response.data.user?.firstName) setCustomerName(response.data.user.firstName);
+        // 1. Fetch Profile Info (Customer Name)
+        const profileRes = await API.get('/customers/profile');
+        if (profileRes.data?.firstName) {
+          setCustomerName(profileRes.data.firstName);
         }
+
+        // 2. Fetch Customer Projects
+        const projectsRes = await API.get('/customers/projects');
+        if (projectsRes.data?.projects) {
+          setProjects(projectsRes.data.projects);
+        }
+
         setLoading(false);
       } catch (error) {
         console.error("Failed to fetch dashboard data from backend:", error);
@@ -49,14 +47,14 @@ export default function CustomerHomePage() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Clear the session token
-    alert("Logged out!");
-    window.location.href = "/login"; // Redirect to the login page
+    localStorage.removeItem('token');
+    localStorage.removeItem('customer');
+    router.push('/login');
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10">
-      {/* Imported Shared Navigation */}
+      {/* Navigation Bars */}
       <CustomerNavi 
         customerName={customerName} 
         role="user" 
@@ -93,39 +91,39 @@ export default function CustomerHomePage() {
                 Real-time compilation meters from ongoing tracking timelines
               </p>
             </div>
-            <button className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">
+            <button 
+              onClick={() => router.push('/Customer/Projects')} 
+              className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+            >
               View All <ArrowRight size={14} />
             </button>
           </div>
 
           {/* Project List */}
           <div className="flex flex-col gap-4">
-            
-            {/* Display loader while projects are fetching */}
             {loading ? (
               <div className="text-center py-6 text-sm text-gray-500 animate-pulse">
                 Loading ongoing projects...
               </div>
             ) : projects.length === 0 ? (
-              // Empty UI shown if no projects exist
               <div className="text-center py-8 text-sm text-gray-400 border border-dashed border-gray-200 rounded-xl">
                 No active projects found at the moment.
               </div>
             ) : (
-              // 🔄 Map and display fetched backend project instances
               projects.map((project) => (
                 <div key={project._id} className="flex items-center gap-4 p-4 border border-gray-100 rounded-xl hover:bg-gray-50/50 transition-colors">
                   <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-600">
                     <Briefcase size={20} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-bold text-gray-900 truncate">{project.name}</h3>
-                    <span className="text-[10px] font-bold text-gray-400 tracking-wider block mt-0.5">
-                      {project.status ? project.status.toUpperCase() : 'ONGOING'}
+                    <h3 className="text-sm font-bold text-gray-900 truncate">
+                      {project.title || project.name || 'Untitled Project'}
+                    </h3>
+                    <span className="text-[10px] font-bold text-gray-400 tracking-wider block mt-0.5 uppercase">
+                      {project.status || 'ONGOING'}
                     </span>
                   </div>
                   <div className="flex items-center gap-4 w-full max-w-[300px] md:max-w-[400px]">
-                    {/* Custom Progress Bar */}
                     <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                       <div 
                         className={`h-full rounded-full ${project.progress < 50 ? 'bg-[#EA580C]' : 'bg-[#1D4ED8]'}`} 
@@ -139,7 +137,6 @@ export default function CustomerHomePage() {
                 </div>
               ))
             )}
-
           </div>
         </div>
 

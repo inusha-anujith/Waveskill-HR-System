@@ -5,130 +5,173 @@ import axios from 'axios';
 import CustomerNavi from '../../../components/CustomerNavi/CustomerNavi';
 import CustomerTabs from '../../../components/CustomerNavi/CustomerTabs';
 
-import { User, Lock, Building2 } from 'lucide-react';
+import { 
+  User, 
+  Building2, 
+  ExternalLink, 
+  ShieldCheck, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Briefcase, 
+  HelpCircle, 
+  Send,
+  CheckCircle2,
+  Clock,
+  Lock
+} from 'lucide-react';
 
-type ActiveSection = 'profile' | 'password' | 'company';
-
-// Structure of Customer Data coming from the Database
 interface CustomerProfile {
+  _id?: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   companyName: string;
-  website: string;
-  address: string;
+  corporateWebsite: string;
+  headquartersAddress: string;
+  country?: string;
   status?: string;
-  location?: string;
+}
+
+interface ProjectStats {
+  total: number;
+  ongoing: number;
+  completed: number;
 }
 
 export default function CustomerProfilePage() {
-  const [activeSection, setActiveSection] = useState<ActiveSection>('profile');
-  
-  // 💾 State Management
   const [profile, setProfile] = useState<CustomerProfile>({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     companyName: '',
-    website: '',
-    address: '',
-    status: 'Active Client',
-    location: 'Colombo, Sri Lanka'
+    corporateWebsite: '',
+    headquartersAddress: '',
+    country: '',
+    status: ''
   });
-  
-  const [loading, setLoading] = useState<boolean>(true);
-  
-  // 🔐 State for Password fields
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
-  // 🔄 1. Fetch Customer Data from the Database on initial page load
+  const [stats, setStats] = useState<ProjectStats>({ total: 0, ongoing: 0, completed: 0 });
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Modal State
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [requestNote, setRequestNote] = useState('');
+  const [requestSent, setRequestSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  
   useEffect(() => {
-    const fetchProfileData = async () => {
+    const fetchProfileAndStats = async () => {
       try {
-        // ⚠️ Note: This URL and headers can be modified later once Auth is implemented
-        const response = await axios.get('http://localhost:5001/api/customer/profile');
-        if (response.data) {
-          setProfile(response.data);
+        const token = localStorage.getItem('token'); 
+
+        
+        if (!token) {
+          window.location.href = '/login';
+          return;
         }
-        setLoading(false);
-      } catch (error) {
-        console.error("Failed to fetch profile data:", error);
+
+        const config = {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        };
+
+        const profileRes = await axios.get('http://localhost:5001/api/customers/profile', config);
+        
+        if (profileRes.data) {
+          const data = profileRes.data.customer || profileRes.data;
+          setProfile({
+            firstName: data.firstName || '',
+            lastName: data.lastName || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            companyName: data.companyName || '',
+            corporateWebsite: data.corporateWebsite || '',
+            headquartersAddress: data.headquartersAddress || '',
+            country: data.country || 'Sri Lanka',
+            status: data.status || 'ACTIVE CLIENT'
+          });
+        }
+
+       
+        const projectsRes = await axios.get('http://localhost:5001/api/customers/projects', config);
+        
+        if (projectsRes.data) {
+          const statsData = projectsRes.data.stats;
+          const projectList = projectsRes.data.projects || [];
+
+          setStats({
+            total: statsData?.all ?? projectList.length,
+            ongoing: statsData?.ongoing ?? projectList.filter((p: any) => ['ongoing', 'active'].includes(p.status?.toLowerCase())).length,
+            completed: statsData?.completed ?? projectList.filter((p: any) => ['completed', 'delivered'].includes(p.status?.toLowerCase())).length
+          });
+        }
+      } catch (error: any) {
+        console.error("Error loading customer profile:", error);
+   
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchProfileData();
+    fetchProfileAndStats();
   }, []);
 
-  // ✍️ Function to handle and update State when an Input Field changes
-  const handleInputChange = (field: keyof CustomerProfile, value: string) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
-  };
-
-  // 📤 2. Send updated Profile or Company Info to the Backend on save
-  const handleSaveChanges = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await axios.put('http://localhost:5001/api/customer/profile/update', profile);
-      if (response.data.success) {
-        alert('Profile data updated successfully! ✅');
-      }
-    } catch (error) {
-      console.error("Update failed:", error);
-      alert('An error occurred while saving data.');
-    }
-  };
-
-  // 🔒 3. Request to change the password
-  const handlePasswordUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      alert("The new passwords do not match!");
-      return;
-    }
-
-    try {
-      const response = await axios.put('http://localhost:5001/api/customer/profile/change-password', {
-        currentPassword,
-        newPassword
-      });
-      if (response.data.success) {
-        alert('Password changed successfully! 🔑');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      }
-    } catch (error) {
-      console.error("Password update error:", error);
-      alert('Failed to update password. Please check if your current password is correct.');
-    }
-  };
-
   const handleLogout = () => {
-    alert("Logged out!");
+    localStorage.removeItem('token');
+    window.location.href = '/login';
   };
 
-  // Extract the first two initials for the Avatar (e.g., Kaushalya Client -> KC)
+  
+  const handleSendRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        'http://localhost:5001/api/customers/update-request',
+        { note: requestNote },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setRequestSent(true);
+      setTimeout(() => {
+        setIsRequestModalOpen(false);
+        setRequestSent(false);
+        setRequestNote('');
+      }, 2000);
+    } catch (error) {
+      console.error("Error sending update request:", error);
+      alert("Request failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getInitials = () => {
-    const first = profile.firstName ? profile.firstName.charAt(0) : 'K';
-    const last = profile.lastName ? profile.lastName.charAt(0) : 'A';
+    const first = profile.firstName ? profile.firstName.charAt(0) : 'U';
+    const last = profile.lastName ? profile.lastName.charAt(0) : '';
     return (first + last).toUpperCase();
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500 font-medium">
-        Loading customer core profile metrics...
+        Loading client profile workspace...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10">
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-12">
       <CustomerNavi 
         customerName={`${profile.firstName} ${profile.lastName}`} 
         role="user" 
@@ -136,229 +179,285 @@ export default function CustomerProfilePage() {
       />
       <CustomerTabs activeTab="Profile" />
 
-      <main className="p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col gap-6">
+      <main className="p-6 md:p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col gap-6">
         
-        {/* 💳 Top Profile Summary Card (Live Dynamic Data) */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex items-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-lg border border-gray-200 uppercase">
-            {getInitials()}
-          </div>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">{profile.firstName || 'Kaushalya'}</h1>
-              <span className="bg-[#E6F4EA] text-[#137333] font-bold text-[10px] tracking-wider px-2.5 py-0.5 rounded-full uppercase">
-                {profile.status || 'Active Client'}
-              </span>
+        {/* Banner Header */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xl uppercase tracking-wider shadow-md">
+              {getInitials()}
             </div>
-            <p className="text-gray-500 text-sm mt-1">
-              {profile.email} <span className="mx-1.5">•</span> {profile.location || 'Colombo, Sri Lanka'}
-            </p>
+            <div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {profile.firstName} {profile.lastName}
+                </h1>
+                {profile.status && (
+                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px] tracking-wider px-3 py-1 rounded-full uppercase flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {profile.status}
+                  </span>
+                )}
+              </div>
+              <p className="text-gray-500 text-sm mt-1 flex items-center gap-2 flex-wrap">
+                <span>{profile.email}</span>
+                {profile.companyName && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span>{profile.companyName}</span>
+                  </>
+                )}
+                {profile.headquartersAddress && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="flex items-center gap-1 text-gray-400">
+                      <MapPin size={13} /> {profile.headquartersAddress}
+                    </span>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsRequestModalOpen(true)}
+            className="w-full md:w-auto bg-black text-white text-xs font-bold px-5 py-3 rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-sm"
+          >
+            <HelpCircle size={15} />
+            Request Information Update
+          </button>
+        </div>
+
+        {/* Project Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Projects</p>
+              <h3 className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</h3>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700">
+              <Briefcase size={20} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Active Engagements</p>
+              <h3 className="text-2xl font-bold text-blue-600 mt-1">{stats.ongoing}</h3>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+              <Clock size={20} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Delivered Projects</p>
+              <h3 className="text-2xl font-bold text-emerald-600 mt-1">{stats.completed}</h3>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <CheckCircle2 size={20} />
+            </div>
           </div>
         </div>
 
-        {/* Settings Workspace Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-          
-          {/* Left Vertical Menu Tabs */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-2 shadow-sm md:col-span-3 flex flex-col gap-1 overflow-hidden">
-            <button 
-              onClick={() => setActiveSection('profile')}
-              className={`flex items-center gap-3 w-full px-4 py-3 text-sm font-bold rounded-xl transition-colors text-left ${
-                activeSection === 'profile' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <User size={16} className={activeSection === 'profile' ? 'text-white' : 'text-gray-400'} />
-              Edit Profile
-            </button>
-            <button 
-              onClick={() => setActiveSection('password')}
-              className={`flex items-center gap-3 w-full px-4 py-3 text-sm font-bold rounded-xl transition-colors text-left ${
-                activeSection === 'password' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Lock size={16} className={activeSection === 'password' ? 'text-white' : 'text-gray-400'} />
-              Change Password
-            </button>
-            <button 
-              onClick={() => setActiveSection('company')}
-              className={`flex items-center gap-3 w-full px-4 py-3 text-sm font-bold rounded-xl transition-colors text-left ${
-                activeSection === 'company' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Building2 size={16} className={activeSection === 'company' ? 'text-white' : 'text-gray-400'} />
-              Company Info
-            </button>
-          </div>
-
-          {/* Right Parameters Formulation Section */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm md:col-span-9">
+        {/* Detailed Profile Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-8 flex flex-col gap-6">
             
-            {/* 📋 PANEL 1: EDIT PROFILE */}
-            {activeSection === 'profile' && (
-              <div className="flex flex-col gap-6">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Edit Profile Parameters</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Update your account identity and system contact records</p>
+            {/* Personal Details */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-5">
+                <div className="flex items-center gap-2.5">
+                  <User className="text-gray-700" size={18} />
+                  <h2 className="text-base font-bold text-gray-900">Personal & Identity Details</h2>
                 </div>
-
-                <form className="flex flex-col gap-5" onSubmit={handleSaveChanges}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">First Name</label>
-                      <input 
-                        type="text" 
-                        value={profile.firstName} 
-                        onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" 
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Last Name</label>
-                      <input 
-                        type="text" 
-                        value={profile.lastName} 
-                        onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Email Workspace</label>
-                      <input 
-                        type="email" 
-                        value={profile.email} 
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" 
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Contact Phone Number</label>
-                      <input 
-                        type="text" 
-                        value={profile.phone} 
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end mt-2">
-                    <button type="submit" className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-900 transition-colors shadow-sm">
-                      Save Changes
-                    </button>
-                  </div>
-                </form>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2.5 py-1 rounded-md flex items-center gap-1">
+                  <Lock size={10} /> Read Only
+                </span>
               </div>
-            )}
 
-            {/* 🔒 PANEL 2: CHANGE PASSWORD */}
-            {activeSection === 'password' && (
-              <div className="flex flex-col gap-6">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Security Credentials</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Update your current password configuration to maintain account ecosystem health</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="bg-[#F8FAFC] p-4 rounded-xl border border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">First Name</p>
+                  <p className="text-sm font-semibold text-gray-800 mt-1">{profile.firstName || '-'}</p>
                 </div>
-
-                <form className="flex flex-col gap-5" onSubmit={handlePasswordUpdate}>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Current Password</label>
-                    <input 
-                      type="password" 
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="••••••••••••" 
-                      className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" 
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">New Password</label>
-                      <input 
-                        type="password" 
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Minimum 8 characters" 
-                        className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" 
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Confirm New Password</label>
-                      <input 
-                        type="password" 
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Re-enter new password" 
-                        className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end mt-2">
-                    <button type="submit" className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-900 transition-colors shadow-sm">
-                      Update Password
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {/* 🏢 PANEL 3: COMPANY INFO */}
-            {activeSection === 'company' && (
-              <div className="flex flex-col gap-6">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Organization Infrastructure</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Manage corporate baseline parameters associated with your client ecosystem workspace</p>
+                <div className="bg-[#F8FAFC] p-4 rounded-xl border border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Last Name</p>
+                  <p className="text-sm font-semibold text-gray-800 mt-1">{profile.lastName || '-'}</p>
                 </div>
-
-                <form className="flex flex-col gap-5" onSubmit={handleSaveChanges}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Company Name</label>
-                      <input 
-                        type="text" 
-                        value={profile.companyName} 
-                        onChange={(e) => handleInputChange('companyName', e.target.value)}
-                        className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" 
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Corporate Website</label>
-                      <input 
-                        type="text" 
-                        value={profile.website} 
-                        onChange={(e) => handleInputChange('website', e.target.value)}
-                        className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Headquarters Address</label>
-                    <input 
-                      type="text" 
-                      value={profile.address} 
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                      className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-gray-400" 
-                    />
-                  </div>
-
-                  <div className="flex justify-end mt-2">
-                    <button type="submit" className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-900 transition-colors shadow-sm">
-                      Save Organization Data
-                    </button>
-                  </div>
-                </form>
+                <div className="bg-[#F8FAFC] p-4 rounded-xl border border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email Address</p>
+                  <p className="text-sm font-semibold text-gray-800 mt-1 flex items-center gap-2">
+                    <Mail size={14} className="text-gray-400" />
+                    {profile.email || '-'}
+                  </p>
+                </div>
+                <div className="bg-[#F8FAFC] p-4 rounded-xl border border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Contact Phone</p>
+                  <p className="text-sm font-semibold text-gray-800 mt-1 flex items-center gap-2">
+                    <Phone size={14} className="text-gray-400" />
+                    {profile.phone || '-'}
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Business Profile */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-5">
+                <div className="flex items-center gap-2.5">
+                  <Building2 className="text-gray-700" size={18} />
+                  <h2 className="text-base font-bold text-gray-900">Corporate & Business Profile</h2>
+                </div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2.5 py-1 rounded-md flex items-center gap-1">
+                  <Lock size={10} /> Managed by Admin
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="bg-[#F8FAFC] p-4 rounded-xl border border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Registered Company Name</p>
+                  <p className="text-sm font-semibold text-gray-800 mt-1">{profile.companyName || '-'}</p>
+                </div>
+                <div className="bg-[#F8FAFC] p-4 rounded-xl border border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Corporate Website</p>
+                  {profile.corporateWebsite ? (
+                    <a 
+                      href={profile.corporateWebsite.startsWith('http') ? profile.corporateWebsite : `https://${profile.corporateWebsite}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm font-semibold text-blue-600 hover:underline mt-1 flex items-center gap-1.5"
+                    >
+                      {profile.corporateWebsite}
+                      <ExternalLink size={13} />
+                    </a>
+                  ) : (
+                    <p className="text-sm font-semibold text-gray-800 mt-1">-</p>
+                  )}
+                </div>
+                <div className="bg-[#F8FAFC] p-4 rounded-xl border border-gray-100 md:col-span-2">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Headquarters & Operational Address</p>
+                  <p className="text-sm font-semibold text-gray-800 mt-1 flex items-center gap-2">
+                    <MapPin size={14} className="text-gray-400" />
+                    {profile.headquartersAddress || '-'}
+                  </p>
+                </div>
+              </div>
+            </div>
 
           </div>
 
+          {/* Right Sidebar */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <h2 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-100 mb-4">
+                Assigned Project Manager
+              </h2>
+
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-sm shadow">
+                  PM
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">Waveskill Project Lead</h3>
+                  <p className="text-xs text-gray-500">Dedicated Client Success Manager</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5 text-xs text-gray-600 border-t border-gray-100 pt-4">
+                <div className="flex items-center gap-2">
+                  <Mail size={14} className="text-gray-400" />
+                  <span>support@waveskill.com</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone size={14} className="text-gray-400" />
+                  <span>+94 (11) 234-5678</span>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setIsRequestModalOpen(true)}
+                className="w-full mt-5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-800 text-xs font-bold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <Send size={13} /> Contact Manager
+              </button>
+            </div>
+
+            <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-2 text-emerald-400 mb-2">
+                <ShieldCheck size={18} />
+                <span className="text-xs font-bold uppercase tracking-wider">Enterprise Security</span>
+              </div>
+              <h3 className="font-bold text-sm text-slate-100">Managed Client Portal</h3>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Your account parameters are directly managed by Waveskill Enterprise Administration to ensure data integrity across active development pipelines.
+              </p>
+            </div>
+          </div>
         </div>
 
       </main>
+
+      {/* Modal */}
+      {isRequestModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
+            {requestSent ? (
+              <div className="py-8 flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle2 size={24} />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Request Submitted!</h3>
+                <p className="text-xs text-gray-500">
+                  Your project manager will review your requested changes and update your account details shortly.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSendRequest} className="flex flex-col gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Request Profile Update</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Describe the changes you would like to make to your profile or corporate information.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 tracking-wider uppercase block mb-1">
+                    Requested Changes / Note
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={requestNote}
+                    onChange={(e) => setRequestNote(e.target.value)}
+                    placeholder="e.g. Please update our headquarters address to Kandy, Sri Lanka..."
+                    className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl p-3 text-xs font-medium text-gray-800 focus:outline-none focus:border-gray-400"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsRequestModalOpen(false)}
+                    className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="bg-black text-white px-5 py-2 text-xs font-bold rounded-xl hover:bg-gray-800 flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Send size={12} /> {submitting ? 'Sending...' : 'Send Request'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
