@@ -3,22 +3,37 @@
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import { Building2, Mail, Lock } from 'lucide-react';
+import API from '@/utils/api'; 
 import { API_BASE } from '../../lib/api';
 
 export default function LoginPage() {
-  // Initialize the router so we can change pages!
   const router = useRouter();
 
-  // 1. Setting up "Memory" for what the user types
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // 2. The function that talks to your backend!
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(""); // Clear previous errors
+    setError("");
 
+    // Step 1: Attempt Customer Authentication via Axios API instance
+    try {
+      const response = await API.post('/customers/login', { email, password });
+      const data = response.data;
+
+      if (response.status === 200) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("customer", JSON.stringify(data.customer));
+        alert("Login Successful! Welcome to Customer Dashboard.");
+        router.push('/Customer/Home');
+        return; // Exit function upon successful customer login
+      }
+    } catch (err: any) {
+      // If customer login fails, proceed to attempt system user authentication below
+    }
+
+    // Step 2: Attempt System User (Admin / Manager / Employee) Authentication via fetch
     try {
       const response = await fetch(`${API_BASE}/api/users/login`, {
         method: "POST",
@@ -33,6 +48,7 @@ export default function LoginPage() {
         localStorage.setItem("role", data.role || "Employee");
         localStorage.setItem("name", data.name || "");
 
+        // Route user based on assigned role
         if (data.role === "Admin") {
           router.push("/Admin/Analytics");
         } else if (data.role === "Manager") {
@@ -41,9 +57,9 @@ export default function LoginPage() {
           router.push("/Employee/Attendance");
         }
       } else {
-        setError(data.message || "Login failed");
+        setError(data.message || "Invalid credentials or login failed");
       }
-    } catch (err) {
+    } catch (err: any) {
       setError("Server is not responding. Is the backend running?");
     }
   };
@@ -52,30 +68,28 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#eef4fa] p-4 font-sans">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-sm border border-gray-100 p-10">
         
-        {/* Header Section */}
+        {/* Form Header */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-blue-700 rounded-full flex items-center justify-center mb-5">
             <Building2 size={28} className="text-white" />
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">
-            HR Management System
+            Software Management
           </h1>
           <p className="text-sm text-gray-500 mt-2">
-            Sign in to access your account
+            Sign in to access your portal
           </p>
         </div>
 
-        {/* Form Section - Now connected to handleLogin! */}
+        {/* Authentication Form */}
         <form className="space-y-5" onSubmit={handleLogin}>
           
-          {/* Error Message Box */}
           {error && (
             <div className="bg-red-50 text-red-500 p-3 rounded-xl text-sm text-center font-medium border border-red-100">
               {error}
             </div>
           )}
 
-          {/* Email Input - Now connected to State */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
               Email
@@ -88,14 +102,13 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@company.com"
+                placeholder="Enter your email"
                 className="w-full pl-12 pr-4 py-3.5 bg-[#f3f4f6] border-transparent rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white text-gray-900 transition-colors outline-none"
                 required
               />
             </div>
           </div>
 
-          {/* Password Input - Now connected to State */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
               Password
@@ -115,7 +128,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-3.5 rounded-xl transition-colors mt-8"
