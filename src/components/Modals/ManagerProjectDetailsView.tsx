@@ -1,15 +1,26 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Calendar, AlignLeft, CheckSquare, Clock, CheckCircle2, Circle, Users, Settings } from 'lucide-react';
 
 interface ManagerProjectDetailsViewProps {
   project: any;
   onClose: () => void;
+  onProgressSave?: (progress: number) => void;
 }
 
-export default function ManagerProjectDetailsView({ project, onClose }: ManagerProjectDetailsViewProps) {
+export default function ManagerProjectDetailsView({ project, onClose, onProgressSave }: ManagerProjectDetailsViewProps) {
+  const [sliderProgress, setSliderProgress] = useState<number>(project.progress ?? 0);
+  const [saving, setSaving] = useState(false);
+
   if (!project) return null;
+
+  const handleSaveProgress = async () => {
+    if (!onProgressSave) return;
+    setSaving(true);
+    await onProgressSave(sliderProgress);
+    setSaving(false);
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-8 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-sm">
@@ -119,23 +130,28 @@ export default function ManagerProjectDetailsView({ project, onClose }: ManagerP
             
             <div className="flex justify-between text-xs mb-2">
               <span className="text-gray-500 font-medium">Current Progress</span>
-              <span className="text-gray-900 font-bold">{project.progress}%</span>
+              <span className="text-gray-900 font-bold">{sliderProgress}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-              <div className="bg-black h-2 rounded-full transition-all duration-500" style={{ width: `${project.progress}%` }}></div>
+              <div className="bg-black h-2 rounded-full transition-all duration-500" style={{ width: `${sliderProgress}%` }}></div>
             </div>
 
             <label className="block text-xs font-medium text-gray-500 mb-2">Adjust Project Progress</label>
-            <input 
-              type="range" 
-              min="0" 
-              max="100" 
-              defaultValue={project.progress} 
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={sliderProgress}
+              onChange={e => setSliderProgress(Number(e.target.value))}
               className="w-full mb-4 accent-black"
             />
 
-            <button className="w-full bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
-              Save Progress
+            <button
+              onClick={handleSaveProgress}
+              disabled={saving}
+              className="w-full bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium py-2.5 rounded-lg transition-colors disabled:opacity-60"
+            >
+              {saving ? 'Saving...' : 'Save Progress'}
             </button>
           </div>
 

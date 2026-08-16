@@ -7,7 +7,7 @@ interface LeaveActionModalProps {
   isOpen: boolean;
   onClose: () => void;
   request: any | null;
-  onUpdateStatus: (id: number, newStatus: string) => void;
+  onUpdateStatus: (id: any, newStatus: string) => void;
 }
 
 export default function LeaveActionModal({ isOpen, onClose, request, onUpdateStatus }: LeaveActionModalProps) {
