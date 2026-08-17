@@ -9,8 +9,22 @@ import { useRouter } from 'next/navigation';
 export default function EmployeeAnnouncementsPage() {
   const router = useRouter();
   
+  // [FIX:] Added userData state to hold the logged-in user's info
+  const [userData, setUserData] = useState<any>(null);
+  
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, urgent: 0, important: 0 });
+
+  // [FIX:] Added function to fetch the real user profile
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch("http://localhost:5001/api/users/me", { headers: { Authorization: `Bearer ${token}` }});
+      const data = await res.json();
+      if (data.success) setUserData(data.data);
+    } catch (error) { console.error("Error fetching profile:", error); }
+  };
 
   const fetchAnnouncements = async () => {
     try {
@@ -50,7 +64,9 @@ export default function EmployeeAnnouncementsPage() {
     }
   };
 
+  // [FIX:] Call fetchUserProfile when the page loads
   useEffect(() => {
+    fetchUserProfile();
     fetchAnnouncements();
   }, []);
 
@@ -93,9 +109,13 @@ export default function EmployeeAnnouncementsPage() {
     }
   };
 
+  // [FIX:] Add loading state so it doesn't crash before fetching the name
+  if (!userData) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10">
-      <EmployeeNavi employeeName="Nithini Jayathilaka" onLogout={handleLogout} />
+      {/* [FIX:] Replaced "{user.name}" with dynamic {userData.name} */}
+      <EmployeeNavi employeeName={userData.name} onLogout={handleLogout} />
       <EmployeeTabs activeTab="Announcements" />
 
       <main className="p-8 max-w-7xl mx-auto w-full flex-1 space-y-6">
@@ -108,9 +128,7 @@ export default function EmployeeAnnouncementsPage() {
 
           <div className="space-y-4">
             {announcements.map((announcement) => {
-              // 🚨 SMART FIX: Grab the value whether the backend calls it 'type' OR 'priority'
               const displayType = announcement.type || announcement.priority;
-              // 🚨 SMART FIX: Grab the value whether the backend calls it 'message' OR 'content'
               const displayMessage = announcement.message || announcement.content;
 
               return (

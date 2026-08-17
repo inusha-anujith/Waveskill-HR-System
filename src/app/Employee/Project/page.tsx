@@ -10,10 +10,24 @@ import { useRouter } from 'next/navigation';
 export default function EmployeeProjectsPage() {
   const router = useRouter();
   
+  // [FIX:] Added userData state
+  const [userData, setUserData] = useState<any>(null);
+
   const [projects, setProjects] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, active: 0, completed: 0 });
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
   const detailsSectionRef = useRef<HTMLDivElement>(null);
+
+  // [FIX:] Added function to fetch the real user profile
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch("http://localhost:5001/api/users/me", { headers: { Authorization: `Bearer ${token}` }});
+      const data = await res.json();
+      if (data.success) setUserData(data.data);
+    } catch (error) { console.error("Error fetching profile:", error); }
+  };
 
   // 1. Fetch real projects from the backend
   const fetchMyProjects = async () => {
@@ -45,7 +59,9 @@ export default function EmployeeProjectsPage() {
     }
   };
 
+  // [FIX:] Call fetchUserProfile when the page loads
   useEffect(() => {
+    fetchUserProfile();
     fetchMyProjects();
   }, []);
 
@@ -66,9 +82,13 @@ export default function EmployeeProjectsPage() {
     try { return new Date(dateString).toLocaleDateString(); } catch (e) { return dateString; }
   };
 
+  // [FIX:] Add loading state
+  if (!userData) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10">
-      <EmployeeNavi employeeName="Nithini Jayathilaka" onLogout={handleLogout} />
+      {/* [FIX:] Replaced "{user.name}" with dynamic {userData.name} */}
+      <EmployeeNavi employeeName={userData.name} onLogout={handleLogout} />
       <EmployeeTabs activeTab="Projects" />
 
       <main className="p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col gap-6">

@@ -9,6 +9,9 @@ import { useRouter } from 'next/navigation';
 export default function EmployeeLeavePage() {
   const router = useRouter();
 
+  // [FIX:] Added userData state
+  const [userData, setUserData] = useState<any>(null);
+
   // Page State
   const [leaveRecords, setLeaveRecords] = useState<any[]>([]);
   const [filterMonth, setFilterMonth] = useState(""); 
@@ -32,6 +35,17 @@ export default function EmployeeLeavePage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
+
+  // [FIX:] Added function to fetch the real user profile
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch("http://localhost:5001/api/users/me", { headers: { Authorization: `Bearer ${token}` }});
+      const data = await res.json();
+      if (data.success) setUserData(data.data);
+    } catch (error) { console.error("Error fetching profile:", error); }
+  };
 
   // 1. Fetch Leave History
   const fetchMyLeaves = async () => {
@@ -70,7 +84,9 @@ export default function EmployeeLeavePage() {
     }
   };
 
+  // [FIX:] Call fetchUserProfile when the page loads
   useEffect(() => {
+    fetchUserProfile();
     fetchMyLeaves();
   }, []);
 
@@ -121,7 +137,6 @@ export default function EmployeeLeavePage() {
 
   // 3. Cancel Pending Leave Request
   const handleCancelLeave = async (leaveId: string) => {
-    // Show confirmation before deleting
     const confirmCancel = window.confirm("Are you sure you want to cancel this leave request? This action cannot be undone.");
     if (!confirmCancel) return;
 
@@ -137,7 +152,7 @@ export default function EmployeeLeavePage() {
         if (data.success) {
             setSuccessMessage("Leave request has been canceled successfully.");
             setTimeout(() => setSuccessMessage(""), 4000);
-            fetchMyLeaves(); // Instantly fetch fresh data to recalculate the cards!
+            fetchMyLeaves(); 
         } else {
             alert("Failed to cancel: " + data.message);
         }
@@ -177,10 +192,12 @@ export default function EmployeeLeavePage() {
       return rowMonth.toString() === filterMonth;
   });
 
+  // [FIX:] Add loading state
+  if (!userData) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10 relative">
       
-      {/* UI Success Popup */}
       {successMessage && (
         <div className="fixed top-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-in fade-in slide-in-from-top-5">
             <CheckCircle2 size={24} className="text-white" />
@@ -194,7 +211,8 @@ export default function EmployeeLeavePage() {
         </div>
       )}
 
-      <EmployeeNavi employeeName="Nithini Jayathilaka" onLogout={handleLogout} />
+      {/* [FIX:] Replaced "{user.name}" with dynamic {userData.name} */}
+      <EmployeeNavi employeeName={userData.name} onLogout={handleLogout} />
       <EmployeeTabs activeTab="Leave" />
 
       <main className="p-8 max-w-7xl mx-auto w-full flex-1 space-y-6">
@@ -295,7 +313,6 @@ export default function EmployeeLeavePage() {
                       </span>
                     </td>
                     <td className="py-4 px-4 text-right">
-                      {/* Only render Cancel button if status is Pending! */}
                       {row.status === 'Pending' && (
                           <button 
                               onClick={() => handleCancelLeave(row._id)}

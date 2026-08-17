@@ -9,6 +9,9 @@ import { useRouter } from 'next/navigation';
 export default function EmployeeAttendancePage() {
   const router = useRouter();
   
+  // [FIX:] Added userData state
+  const [userData, setUserData] = useState<any>(null);
+
   const [isMounted, setIsMounted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   
@@ -20,6 +23,17 @@ export default function EmployeeAttendancePage() {
   const [liveOT, setLiveOT] = useState("");
   
   const [viewingMonth, setViewingMonth] = useState(new Date());
+
+  // [FIX:] Added function to fetch the real user profile
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch("http://localhost:5001/api/users/me", { headers: { Authorization: `Bearer ${token}` }});
+      const data = await res.json();
+      if (data.success) setUserData(data.data);
+    } catch (error) { console.error("Error fetching profile:", error); }
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -55,7 +69,7 @@ export default function EmployeeAttendancePage() {
         }
     }, 1000);
     return () => clearInterval(timer);
-  }, [todayRecord]); // <-- Note: added todayRecord as dependency so interval has latest state
+  }, [todayRecord]); 
 
   const fetchMyAttendance = async () => {
     try {
@@ -86,7 +100,9 @@ export default function EmployeeAttendancePage() {
     }
   };
 
+  // [FIX:] Call fetchUserProfile when the page loads
   useEffect(() => {
+    fetchUserProfile();
     fetchMyAttendance();
   }, []);
 
@@ -167,6 +183,9 @@ export default function EmployeeAttendancePage() {
   const hasCheckedIn = !!todayRecord;
   const hasCheckedOut = todayRecord && !!todayRecord.checkOut;
 
+  // [FIX:] Add loading state
+  if (!userData) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-10 relative">
       
@@ -183,7 +202,8 @@ export default function EmployeeAttendancePage() {
         </div>
       )}
 
-      <EmployeeNavi employeeName="Nithini Jayathilaka" onLogout={handleLogout} />
+      {/* [FIX:] Replaced "{user.name}" with dynamic {userData.name} */}
+      <EmployeeNavi employeeName={userData.name} onLogout={handleLogout} />
       <EmployeeTabs activeTab="Attendance" />
 
       <main className="p-8 max-w-7xl mx-auto w-full flex-1 space-y-6">
@@ -207,14 +227,12 @@ export default function EmployeeAttendancePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-sm text-gray-500 mb-2">Check In</p>
-                  {/* ADDED tabular-nums HERE */}
                   <div className="flex items-center gap-2 text-green-600 font-medium text-2xl tracking-tight tabular-nums">
                     <Clock size={24} /> {hasCheckedIn ? formatTime(todayRecord.checkIn) : "--:--:--"}
                   </div>
                 </div>
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-sm text-gray-500 mb-2">Check Out</p>
-                  {/* ADDED tabular-nums HERE */}
                   <div className="flex items-center gap-2 text-red-600 font-medium text-2xl tracking-tight tabular-nums">
                     <Clock size={24} /> {hasCheckedOut ? formatTime(todayRecord.checkOut) : "Not yet"}
                   </div>
@@ -231,7 +249,6 @@ export default function EmployeeAttendancePage() {
             </div>
 
             <div className="flex flex-col items-end gap-3 w-full lg:w-auto mt-4 lg:mt-0 border-t lg:border-t-0 border-gray-200 pt-6 lg:pt-0">
-              {/* ADDED tabular-nums HERE */}
               <div className="text-5xl font-normal text-gray-800 tracking-tight mb-2 tabular-nums">
                 {isMounted ? currentTime.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "--:--:--"}
               </div>
@@ -247,7 +264,6 @@ export default function EmployeeAttendancePage() {
                         {isLoading ? "Processing..." : (hasCheckedIn ? "Check Out" : "Check In")}
                       </button>
                       
-                      {/* ADDED tabular-nums HERE */}
                       {liveOT && (
                           <div className="mt-3 text-sm font-semibold text-orange-600 animate-pulse bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100 tabular-nums">
                               Active OT: {liveOT}
