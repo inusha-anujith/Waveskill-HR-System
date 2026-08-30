@@ -7,7 +7,7 @@ import EditProfileModal from '../../../components/Modals/EditProfileModal';
 import { useRouter } from 'next/navigation';
 import { 
   Edit, User, Mail, Phone, Calendar, Briefcase, Building, Award, Users, 
-  MapPin, HeartPulse, Droplet, Clock, FileText, CheckCircle2, ShieldAlert, Code2, Activity, X
+  MapPin, HeartPulse, Droplet, FileText, CheckCircle2, ShieldAlert, Code2, X
 } from 'lucide-react';
 
 export default function EmployeeProfilePage() {
@@ -21,7 +21,12 @@ export default function EmployeeProfilePage() {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [leaveStats, setLeaveStats] = useState({ totalLeaves: 0, approvedDays: 0, pendingDays: 0, rejectedDays: 0 });
 
+  // ==========================================
+  // DATA FETCHING FUNCTIONS
+  // ==========================================
   const fetchUserProfile = async () => {
+    // WHY TRY/CATCH? Network requests can fail if the server is down or internet drops.
+    // Catching it prevents the UI from completely crashing and showing a blank white screen.
     try {
       const token = localStorage.getItem('token');
       if (!token) { router.push('/login'); return; }
@@ -69,6 +74,14 @@ export default function EmployeeProfilePage() {
     try { return new Date(dateString).toLocaleDateString(); } catch (e) { return dateString; }
   };
 
+  // Safely format phone numbers to prevent the "Double Prefix" bug on legacy dirty data
+  const formatPhoneDisplay = (code: string, number: string) => {
+      if (!number) return 'Not Set';
+      // Strip out the starting +94, 94, or 0, leaving just the 9-digit core.
+      const cleanNumber = number.replace(/^(\+94|94|0)/, '');
+      return `${code || '+94'} ${cleanNumber}`;
+  };
+
   if (!userData) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading Profile...</div>;
 
   return (
@@ -94,7 +107,6 @@ export default function EmployeeProfilePage() {
         <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-6">
             <div className="relative">
-              {/* [LEARNING NOTE]: Dynamic UI for Photo - Reverts to Initials if photo is removed */}
               {userData.profilePhoto ? (
                   <img src={userData.profilePhoto} alt="Profile" className="w-20 h-20 rounded-full object-cover border-2 border-white shadow-sm bg-white" />
               ) : (
@@ -148,9 +160,9 @@ export default function EmployeeProfilePage() {
           </div>
         </div>
 
-        {/* Navigation Pills */}
+        {/* Navigation Pills (Removed 'Activity') */}
         <div className="bg-gray-200/60 p-1.5 rounded-full flex overflow-x-auto text-sm font-medium mb-2">
-          {['Overview', 'Activity', 'Skills', 'Emergency'].map((tab) => (
+          {['Overview', 'Skills', 'Emergency'].map((tab) => (
             <button 
               key={tab} onClick={() => setActiveTab(tab)}
               className={`flex-1 min-w-[120px] py-2.5 rounded-full text-center transition-all duration-200 ${
@@ -186,7 +198,7 @@ export default function EmployeeProfilePage() {
                     <div>
                       <p className="text-xs text-gray-500 mb-0.5">Phone Number</p>
                       <p className="text-sm font-semibold text-gray-900">
-                          {userData.phoneNumber ? `${userData.countryCode || '+94'} ${userData.phoneNumber}` : 'Not Set'}
+                          {formatPhoneDisplay(userData.countryCode, userData.phoneNumber)}
                       </p>
                     </div>
                   </div>
@@ -254,7 +266,7 @@ export default function EmployeeProfilePage() {
                 <p className="text-xs text-red-600 font-medium mb-2">{userData.emergencyContact?.relation || 'Relationship Not Specified'}</p>
                 <p className="text-sm font-medium text-gray-600 flex items-center gap-2 bg-white/60 p-2 rounded-lg inline-flex border border-red-100/50">
                   <Phone size={14} className="text-red-500" /> 
-                  {userData.emergencyContact?.phone ? `${userData.emergencyContact?.countryCode || '+94'} ${userData.emergencyContact?.phone}` : 'Not Set'}
+                  {formatPhoneDisplay(userData.emergencyContact?.countryCode, userData.emergencyContact?.phone)}
                 </p>
               </div>
 
@@ -272,30 +284,6 @@ export default function EmployeeProfilePage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== TAB CONTENT: ACTIVITY LOG ==================== */}
-        {activeTab === 'Activity' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 animate-in fade-in duration-300">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-              <Activity size={20} className="text-gray-500" /> Recent Activity
-            </h3>
-            <div className="space-y-4">
-                {userData.activities && userData.activities.length > 0 ? (
-                    userData.activities.map((act: any, idx: number) => (
-                        <div key={idx} className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
-                            <div className="bg-blue-100 text-blue-600 p-2 rounded-full"><Clock size={16}/></div>
-                            <div>
-                                <p className="font-semibold text-gray-900">{act.action}</p>
-                                <p className="text-xs text-gray-500">{new Date(act.date).toLocaleString()}</p>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <p className="text-gray-500 text-center py-8">No recent activity logged.</p>
-                )}
             </div>
           </div>
         )}
