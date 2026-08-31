@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+// [NEW]: Import the Change Password Modal component so it can be rendered on top
+import ChangePasswordModal from './ChangePasswordModal';
 
 export default function EditProfileModal({ isOpen, onClose, currentData, onSaveSuccess }: any) {
   const [formData, setFormData] = useState({
@@ -13,7 +15,7 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
       emergencyPhone: '',
       emergencyRelation: '',
       bloodGroup: '',
-      allergies: '', // State already exists for this!
+      allergies: '', 
       profilePhoto: '',
       cvFileName: ''
   });
@@ -21,6 +23,9 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
   const [skills, setSkills] = useState<any[]>([]);
   const [newSkill, setNewSkill] = useState({ name: '', level: 'Beginner' });
   const [isLoading, setIsLoading] = useState(false);
+
+  // [NEW]: State to control the visibility of the Change Password sub-modal
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const sanitizeInitialPhone = (phone: string) => {
       if (!phone) return '';
@@ -138,11 +143,22 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-8">
         
+        {/* [UPDATED]: Header area modified to include the Change Password button */}
         <div className="flex justify-between items-center mb-6">
             <h3 className="text-2xl font-bold text-gray-900">Edit Profile</h3>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
+            <div className="flex items-center gap-3">
+                {/* Button triggers the sub-modal to open without closing the main form */}
+                <button 
+                    type="button" 
+                    onClick={() => setIsPasswordModalOpen(true)} 
+                    className="text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition-colors"
+                >
+                    Change Password
+                </button>
+                <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -208,7 +224,7 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
                 <input type="text" name="addressLine3" value={formData.addressLine3} onChange={handleChange} placeholder="Line 3 (Province / Postal Code)" className={inputStyle}/>
             </div>
 
-            {/* [NEW]: Dedicated Medical Details Section */}
+            {/* Dedicated Medical Details Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
                 <div className="col-span-1 md:col-span-2"><h4 className="font-semibold text-gray-900">Medical Details</h4></div>
                 <div>
@@ -219,7 +235,6 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
                     </select>
                 </div>
                 <div>
-                    {/* The missing Allergies input field is now connected! */}
                     <input type="text" name="allergies" value={formData.allergies} onChange={handleChange} placeholder="Allergies (e.g. Peanuts, None)" className={inputStyle}/>
                 </div>
             </div>
@@ -272,6 +287,9 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
             </div>
         </form>
       </div>
+
+      {/* [NEW]: Render the Change Password Modal entirely on top of the Edit Profile modal when the state is set to true */}
+      <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
     </div>
   );
 }
