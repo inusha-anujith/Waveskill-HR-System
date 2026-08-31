@@ -8,6 +8,7 @@ import FilterSelect, { FilterOption } from '../../../components/FilterSelect/Fil
 import { Search, Calendar, Download, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { API_BASE, authHeaders, clearAuth, getStoredName, formatTime } from '../../../lib/api';
 import { useToast } from '../../../components/Toast/ToastProvider';
+import OTActionModal from '../../../components/Modals/OTActionModal';
 
 interface AttendanceRecord {
   _id: string;
@@ -98,6 +99,7 @@ export default function ManagerAttendancePage() {
   const [otStatusFilter, setOtStatusFilter] = useState('');
   const [otSearch, setOtSearch] = useState('');
   const [processingOT, setProcessingOT] = useState<string | null>(null);
+  const [reviewingOT, setReviewingOT] = useState<OTRequest | null>(null);
 
   const fetchAttendance = async () => {
     setAttLoading(true);
@@ -146,16 +148,18 @@ export default function ManagerAttendancePage() {
     return otRequests.filter(r => r.user?.name?.toLowerCase().includes(q));
   }, [otRequests, otSearch]);
 
-  const handleOTAction = async (id: string, action: 'approve' | 'reject') => {
+  const handleOTAction = async (id: string, action: 'approve' | 'reject', reviewNote = '') => {
     setProcessingOT(id);
     try {
       const res = await fetch(`${API_BASE}/api/admin/ot/${id}/${action}`, {
         method: 'PATCH',
         headers: authHeaders(),
+        body: JSON.stringify({ reviewNote }),
       });
       const data = await res.json();
       if (!data.success) { toast.error(data.message || `Failed to ${action}`); return; }
       toast.success(`OT request ${action}d successfully`);
+      setReviewingOT(null);
       fetchOTRequests();
     } catch { toast.error('Network error'); }
     finally { setProcessingOT(null); }
@@ -341,7 +345,8 @@ export default function ManagerAttendancePage() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {filteredOT.map(ot => (
-                        <tr key={ot._id} className="hover:bg-gray-50/50 transition-colors bg-white">
+                        <tr key={ot._id} onClick={() => setReviewingOT(ot)}
+                          className="hover:bg-gray-50/50 transition-colors bg-white cursor-pointer">
                           <td className="py-4 px-6 whitespace-nowrap">
                             <p className="text-sm font-medium text-gray-800">{ot.user?.name ?? '—'}</p>
                             <p className="text-xs text-gray-400">{ot.user?.department ?? ''}</p>
@@ -356,7 +361,7 @@ export default function ManagerAttendancePage() {
                           <td className="py-4 px-6 whitespace-nowrap">
                             <span className={`text-[11px] font-medium px-3 py-1 rounded-full ${otStatusBadge(ot.status)}`}>{ot.status}</span>
                           </td>
-                          <td className="py-4 px-6 whitespace-nowrap text-center">
+                          <td className="py-4 px-6 whitespace-nowrap text-center" onClick={e => e.stopPropagation()}>
                             {ot.status === 'Pending' ? (
                               <div className="flex items-center justify-center gap-2">
                                 <button
@@ -367,7 +372,7 @@ export default function ManagerAttendancePage() {
                                   <CheckCircle2 size={13} /> Approve
                                 </button>
                                 <button
-                                  onClick={() => handleOTAction(ot._id, 'reject')}
+                                  onClick={() => setReviewingOT(ot)}
                                   disabled={processingOT === ot._id}
                                   className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
                                 >
@@ -375,9 +380,14 @@ export default function ManagerAttendancePage() {
                                 </button>
                               </div>
                             ) : (
-                              <span className="text-xs text-gray-400">
+                              <div className="text-xs text-gray-400">
                                 {ot.reviewedBy ? `By ${ot.reviewedBy.name}` : 'Reviewed'}
-                              </span>
+                                {ot.reviewNote && (
+                                  <p className="text-[11px] text-gray-400 italic max-w-[180px] truncate mx-auto" title={ot.reviewNote}>
+                                    &ldquo;{ot.reviewNote}&rdquo;
+                                  </p>
+                                )}
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -394,6 +404,14 @@ export default function ManagerAttendancePage() {
 
         </div>
       </main>
+
+      <OTActionModal
+        isOpen={!!reviewingOT}
+        request={reviewingOT}
+        busy={!!processingOT}
+        onClose={() => setReviewingOT(null)}
+        onAction={handleOTAction}
+      />
     </div>
   );
 }

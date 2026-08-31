@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { LogOut } from 'lucide-react';
+import UserMenu from '../UserMenu/UserMenu';
 
 interface EmployeeNaviProps {
   employeeName: string;
@@ -17,13 +17,7 @@ const EmployeeNavi: React.FC<EmployeeNaviProps> = ({ employeeName, onLogout }) =
         {/* Added mt-0.5 to exactly match Admin spacing */}
         <p className="text-sm text-gray-500 mt-0.5">Welcome, {employeeName}</p>
       </div>
-      <button 
-        onClick={onLogout} 
-        className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-      >
-        <LogOut size={18} className="text-gray-700" />
-        <span className="font-medium text-gray-900">Logout</span>
-      </button>
+      <UserMenu name={employeeName} role="Employee" profileHref="/Employee/Profile" onLogout={onLogout} />
     </header>
   );
 };
