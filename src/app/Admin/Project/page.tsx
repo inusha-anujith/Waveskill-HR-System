@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { clearAuth } from '../../../lib/api';
 // Correctly routing up 3 levels
 import AdminNavi from '../../../components/AdminNavi/AdminNavi';
 import AdminTabs from '../../../components/AdminNavi/AdminTabs';
@@ -46,6 +48,7 @@ const mockProjects = [
 ];
 
 export default function AdminProjectsPage() {
+  const router = useRouter();
   // State for modals and selections
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
@@ -54,7 +57,8 @@ export default function AdminProjectsPage() {
   const detailsSectionRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = () => {
-    alert("Logged out!");
+    clearAuth();
+    router.push('/login');
   };
 
   // Function to handle clicking a card and scrolling down
@@ -168,7 +172,11 @@ export default function AdminProjectsPage() {
       </main>
 
       {/* Existing Modal Component for creating new projects */}
-      <ProjectModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <ProjectModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }

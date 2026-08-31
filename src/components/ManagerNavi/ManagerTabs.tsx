@@ -3,7 +3,10 @@ import Link from 'next/link';
 import { LineChart, Calendar, FileText, LayoutGrid, Bell } from 'lucide-react';
 
 interface ManagerTabsProps {
-  activeTab: 'Analytics' | 'Attendance' | 'Leaves' | 'Projects' | 'Announcements';
+  // 'Profile' and 'Employees' are reachable from the header user menu / direct
+  // routes rather than the tab bar, so they are valid states with no tab
+  // highlighted.
+  activeTab: 'Analytics' | 'Attendance' | 'Leaves' | 'Projects' | 'Announcements' | 'Profile' | 'Employees';
 }
 
 const ManagerTabs: React.FC<ManagerTabsProps> = ({ activeTab }) => {

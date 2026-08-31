@@ -1,15 +1,18 @@
 import React from 'react';
 import Link from 'next/link';
-import { LineChart, Users, Bell } from 'lucide-react';
+import { LineChart, Users, Bell, Building2 } from 'lucide-react';
 
 interface AdminTabsProps {
-  activeTab: 'Analytics' | 'Employees' | 'Announcements';
+  // 'Profile' is reachable from the header user menu rather than the tab bar,
+  // so it is a valid state with no tab highlighted.
+  activeTab: 'Analytics' | 'Employees' | 'Customers' | 'Announcements' | 'Profile';
 }
 
 const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab }) => {
   const tabs = [
     { name: 'Analytics',      path: '/Admin/Analytics',     icon: <LineChart size={18} strokeWidth={2} /> },
     { name: 'Employees',      path: '/Admin/EmployeeManage', icon: <Users size={18} strokeWidth={2} /> },
+    { name: 'Customers',      path: '/Admin/Customers',     icon: <Building2 size={18} strokeWidth={2} /> },
     { name: 'Announcements',  path: '/Admin/Announcement',  icon: <Bell size={18} strokeWidth={2} /> },
   ];
 

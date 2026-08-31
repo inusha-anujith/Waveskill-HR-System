@@ -131,9 +131,11 @@ export default function EmployeeModal({ isOpen, onClose, existing, onSaved }: Em
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans">
-      <div className="bg-white rounded-3xl w-full max-w-2xl p-8 shadow-xl relative max-h-[90vh] overflow-y-auto">
+      {/* Flex column so only the field area scrolls — the header and the action
+          buttons stay put instead of the whole rounded panel scrolling. */}
+      <div className="bg-white rounded-3xl w-full max-w-2xl shadow-xl relative max-h-[90vh] flex flex-col overflow-hidden">
 
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center px-8 pt-8 pb-5 shrink-0">
           <div>
             <h2 className="text-xl font-bold text-gray-900">{isEdit ? 'Edit Employee' : 'Add New Employee'}</h2>
             <p className="text-sm text-gray-500 mt-1">{isEdit ? 'Update team member details' : 'Register a new team member'}</p>
@@ -143,12 +145,14 @@ export default function EmployeeModal({ isOpen, onClose, existing, onSaved }: Em
           </button>
         </div>
 
-        {apiError && (
-          <div className="mb-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl p-3">{apiError}</div>
-        )}
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit} noValidate>
+          <div className="scroll-area flex-1 overflow-y-auto px-8 pb-2">
 
-        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {apiError && (
+              <div className="mb-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl p-3">{apiError}</div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
             {/* Full Name */}
             <div>
@@ -253,14 +257,15 @@ export default function EmployeeModal({ isOpen, onClose, existing, onSaved }: Em
             </div>
 
             {/* Join Date */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-900 mb-2">Join Date</label>
-              <input type="date" value={joinDate} onChange={e => setJoinDate(e.target.value)}
-                className={fieldClass()} />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">Join Date</label>
+                <input type="date" value={joinDate} onChange={e => setJoinDate(e.target.value)}
+                  className={fieldClass()} />
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
+          <div className="flex justify-end gap-3 px-8 py-5 border-t border-gray-100 bg-white shrink-0">
             <button type="button" onClick={onClose}
               className="px-6 py-3.5 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors">
               Cancel
