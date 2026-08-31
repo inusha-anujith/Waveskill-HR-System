@@ -1,29 +1,22 @@
 "use client";
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, LogOut, User } from 'lucide-react';
 
 interface UserMenuProps {
-  /** Display name of the signed-in user */
   name: string;
-  /** Role label shown under the name, e.g. "Admin" */
   role?: string;
-  /** Where the "Profile" item navigates to, e.g. "/Admin/Profile" */
   profileHref: string;
-  /** Existing logout handler from the host page (clears auth + redirects) */
   onLogout: () => void;
+  // [NEW]: Optional prop to receive the base64 profile photo string
+  profilePhoto?: string; 
 }
 
-// Replaces the bare "Logout" button that used to sit in every portal header.
-// Shared by AdminNavi, ManagerNavi, EmployeeNavi and CustomerNavi so the four
-// near-identical headers stay in sync.
-export default function UserMenu({ name, role, profileHref, onLogout }: UserMenuProps) {
+export default function UserMenu({ name, role, profileHref, onLogout, profilePhoto }: UserMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click and on Escape.
+  // Close dropdown on outside click and on Escape key.
   useEffect(() => {
     if (!open) return;
 
@@ -65,13 +58,19 @@ export default function UserMenu({ name, role, profileHref, onLogout }: UserMenu
         aria-label="Open user menu"
         className="flex items-center gap-2 p-1 pr-2 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
       >
-        <span className="w-9 h-9 rounded-full bg-blue-700 text-white flex items-center justify-center text-sm font-semibold">
-          {initial}
-        </span>
-        <ChevronDown
-          size={16}
-          className={`text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
-        />
+        {/* [NEW]: Display the photo if available, otherwise fallback to the blue circle */}
+        {profilePhoto ? (
+          <img src={profilePhoto} alt={name} className="w-9 h-9 rounded-full object-cover border border-gray-200" />
+        ) : (
+          <span className="w-9 h-9 rounded-full bg-blue-700 text-white flex items-center justify-center text-sm font-semibold">
+            {initial}
+          </span>
+        )}
+        
+        {/* [NEW]: Standard inline SVG replacing lucide-react ChevronDown */}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}>
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
       </button>
 
       {open && (
@@ -90,7 +89,10 @@ export default function UserMenu({ name, role, profileHref, onLogout }: UserMenu
               onClick={goToProfile}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
             >
-              <User size={16} className="text-gray-400" />
+              {/* [NEW]: Standard inline SVG replacing lucide-react User */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
               Profile
             </button>
             <button
@@ -98,7 +100,10 @@ export default function UserMenu({ name, role, profileHref, onLogout }: UserMenu
               onClick={signOut}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
             >
-              <LogOut size={16} className="text-red-400" />
+              {/* [NEW]: Standard inline SVG replacing lucide-react LogOut */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-400">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+              </svg>
               Sign Out
             </button>
           </div>
