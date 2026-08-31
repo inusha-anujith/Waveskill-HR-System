@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, Mail, Phone, Briefcase, Calendar, Building, Hash, MapPin, Shield, DollarSign, Clock, Key, FileText, Heart } from 'lucide-react';
 import { API_BASE, authHeaders } from '../../lib/api';
 import { useToast } from '../Toast/ToastProvider';
+import Avatar from '../Avatar/Avatar';
 
 interface AdminEmployeeDetailsModalProps {
   isOpen: boolean;
@@ -75,8 +76,8 @@ export default function AdminEmployeeDetailsModal({ isOpen, onClose, employee, o
               <X size={20} />
             </button>
 
-            <div className="absolute -bottom-12 left-8 w-24 h-24 rounded-full bg-blue-700 text-white flex items-center justify-center text-4xl font-bold border-4 border-white shadow-sm">
-              {employee.name.charAt(0)}
+            <div className="absolute -bottom-12 left-8">
+              <Avatar name={employee.name} photo={employee.profilePhoto} size={96} className="border-4 border-white shadow-sm" />
             </div>
           </div>
 

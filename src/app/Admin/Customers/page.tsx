@@ -8,6 +8,8 @@ import CustomerModal, { CustomerRecord } from '../../../components/Modals/Custom
 import ConfirmModal from '../../../components/Modals/ConfirmModal';
 import FilterSelect, { FilterOption } from '../../../components/FilterSelect/FilterSelect';
 import { useToast } from '../../../components/Toast/ToastProvider';
+import SearchHint from '../../../components/FilterSelect/SearchHint';
+import { useDebouncedSearch, useLatestRequest, isAbortError } from '../../../hooks/useDebouncedSearch';
 import { API_BASE, authHeaders, clearAuth, getStoredName, formatDate } from '../../../lib/api';
 import {
   Search, Pencil, Plus, Building2, UserCheck, Briefcase, Globe, Mail, Phone, MapPin, X, UserX, RotateCcw
@@ -43,7 +45,9 @@ export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<BackendCustomer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const search = useDebouncedSearch();
+  const nextSignal = useLatestRequest();
+  const [stats, setStats] = useState<{ total: number; active: number; prospects: number; totalProjects: number } | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [adminName, setAdminName] = useState('Admin');
 
@@ -53,45 +57,50 @@ export default function AdminCustomersPage() {
   const [pendingToggle, setPendingToggle] = useState<{ customer: BackendCustomer; action: 'deactivate' | 'reactivate' } | null>(null);
   const [toggling, setToggling] = useState(false);
 
+  // Search and status are applied by the API; the abort signal keeps a slow
+  // earlier response from overwriting a newer one while typing.
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/customers`, { headers: authHeaders() });
+      const params = new URLSearchParams();
+      if (search.term) params.set('search', search.term);
+      if (statusFilter) params.set('status', statusFilter);
+
+      const res = await fetch(`${API_BASE}/api/admin/customers?${params}`, {
+        headers: authHeaders(),
+        signal: nextSignal(),
+      });
       if (res.status === 401 || res.status === 403) { router.push('/login'); return; }
       const data = await res.json();
-      if (data.success) { setCustomers(data.data as BackendCustomer[]); setError(null); }
-      else setError(data.message || 'Failed to load customers');
+      if (data.success) {
+        setCustomers(data.data as BackendCustomer[]);
+        setStats(data.stats ?? null);
+        setError(null);
+      } else {
+        setError(data.message || 'Failed to load customers');
+      }
     } catch (e: any) {
+      if (isAbortError(e)) return;
       setError(e.message || 'Network error');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => { setAdminName(getStoredName() || 'Admin'); }, []);
+
   useEffect(() => {
-    setAdminName(getStoredName() || 'Admin');
     fetchCustomers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [search.term, statusFilter]);
 
-  const filtered = useMemo(() => {
-    let list = customers;
-    if (statusFilter) list = list.filter(c => c.status === statusFilter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(c =>
-        `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
-        c.email?.toLowerCase().includes(q) ||
-        c.companyName?.toLowerCase().includes(q) ||
-        c.industry?.toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [customers, search, statusFilter]);
+  // Already filtered server-side.
+  const filtered = customers;
 
-  const activeCount = customers.filter(c => c.status === 'ACTIVE CLIENT').length;
-  const prospectCount = customers.filter(c => c.status === 'PROSPECT').length;
-  const totalProjects = customers.reduce((sum, c) => sum + (c.projectCount || 0), 0);
+  const totalCount = stats?.total ?? 0;
+  const activeCount = stats?.active ?? 0;
+  const prospectCount = stats?.prospects ?? 0;
+  const totalProjects = stats?.totalProjects ?? 0;
 
   const confirmToggle = async () => {
     if (!pendingToggle) return;
@@ -134,7 +143,7 @@ export default function AdminCustomersPage() {
               <p className="text-sm text-gray-500 font-medium">Total Customers</p>
               <Building2 size={18} className="text-gray-400" />
             </div>
-            <p className="text-3xl font-semibold text-gray-900">{loading ? '...' : customers.length}</p>
+            <p className="text-3xl font-semibold text-gray-900">{loading ? '...' : totalCount}</p>
             <p className="text-[11px] text-gray-400 mt-1">All client accounts</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
@@ -185,10 +194,11 @@ export default function AdminCustomersPage() {
                 <Search size={18} className="text-gray-400" />
               </div>
               <input
-                type="text" value={search} onChange={e => setSearch(e.target.value)}
+                type="text" value={search.value} onChange={e => search.setValue(e.target.value)}
                 placeholder="Search by name, company, email, or industry..."
                 className="w-full pl-11 pr-4 py-3 bg-[#f3f4f6] border-transparent rounded-xl focus:ring-2 focus:ring-gray-200 focus:bg-white text-sm text-gray-900 transition-colors outline-none"
               />
+              <SearchHint belowMinimum={search.belowMinimum} pending={search.pending} />
             </div>
             <FilterSelect options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter}
               placeholder="All Statuses" className="w-full md:w-52" />

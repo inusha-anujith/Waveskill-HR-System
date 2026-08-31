@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, Mail, Phone, Briefcase, Calendar, Building, Hash, MapPin } from 'lucide-react';
+import Avatar from '../Avatar/Avatar';
 
 interface EmployeeDetailsModalProps {
   isOpen: boolean;
@@ -41,9 +42,7 @@ export default function EmployeeDetailsModal({ isOpen, onClose, employee }: Empl
           {/* Avatar and Name Header (Fixed Flex Layout) */}
           <div className="flex flex-col sm:flex-row sm:items-end gap-5 -mt-12 mb-8 relative z-10">
             {/* Avatar overlapping the banner */}
-            <div className="w-24 h-24 rounded-full bg-blue-700 text-white flex items-center justify-center text-4xl font-bold border-4 border-white shadow-sm shrink-0">
-              {employee.name.charAt(0)}
-            </div>
+            <Avatar name={employee.name} photo={employee.profilePhoto} size={96} className="border-4 border-white shadow-sm" />
             
             {/* Name and Badges */}
             <div className="flex-1 pb-1 flex flex-col sm:flex-row justify-between sm:items-end gap-4">
