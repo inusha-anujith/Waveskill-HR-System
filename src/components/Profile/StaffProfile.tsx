@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { API_BASE, authHeaders, getToken, formatDate } from '../../lib/api';
 import { useToast } from '../Toast/ToastProvider';
+import Avatar from '../Avatar/Avatar';
 
 interface StaffProfileProps {
   /** Called once the profile loads, so the host page can show the real name in its header */
@@ -109,13 +110,7 @@ export default function StaffProfile({ onLoaded }: StaffProfileProps) {
       {/* Header card */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-6">
-          {user.profilePhoto ? (
-            <img src={user.profilePhoto} alt="Profile" className="w-20 h-20 rounded-full object-cover border-2 border-white shadow-sm" />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-blue-700 text-white flex items-center justify-center text-3xl font-bold uppercase shadow-sm">
-              {user.name?.charAt(0)}
-            </div>
-          )}
+          <Avatar name={user.name} photo={user.profilePhoto} size={80} className="border-2 border-white shadow-sm" />
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{user.name}</h2>
             <p className="text-gray-400 text-sm mb-3">{jobTitle}</p>

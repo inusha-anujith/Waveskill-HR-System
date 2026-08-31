@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, AlignLeft, CheckSquare, CheckCircle2, Circle } from 'lucide-react';
+import Avatar from '../Avatar/Avatar';
 
 interface ProjectDetailsViewProps {
   project: any;
@@ -252,9 +253,7 @@ export default function ProjectDetailsView({ project, onClose, onRefresh }: Proj
               {project.team && project.team.length > 0 ? (
                 project.team.map((member: any, idx: number) => (
                   <div key={idx} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-700 text-white flex items-center justify-center text-xs font-semibold">
-                      {member.user?.name ? member.user.name.charAt(0) : 'U'}
-                    </div>
+                    <Avatar name={member.user?.name} photo={member.user?.profilePhoto} size={32} />
                     <div className="flex flex-col">
                       <span className="text-sm font-medium text-gray-900">{member.user?.name || 'Unknown User'}</span>
                       <span className="text-xs text-gray-500">{member.role || 'Member'}</span>

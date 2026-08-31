@@ -1,6 +1,9 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ChevronDown, LogOut, User } from 'lucide-react';
+import Avatar from '../Avatar/Avatar';
+import { getStoredPhoto } from '../../lib/api';
 
 interface UserMenuProps {
   name: string;
@@ -14,9 +17,13 @@ interface UserMenuProps {
 export default function UserMenu({ name, role, profileHref, onLogout, profilePhoto }: UserMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click and on Escape key.
+  // Read after mount: localStorage is unavailable during server rendering.
+  useEffect(() => { setPhoto(getStoredPhoto()); }, []);
+
+  // Close on outside click and on Escape.
   useEffect(() => {
     if (!open) return;
 
@@ -37,8 +44,6 @@ export default function UserMenu({ name, role, profileHref, onLogout, profilePho
     };
   }, [open]);
 
-  const initial = (name || '?').trim().charAt(0).toUpperCase();
-
   const goToProfile = () => {
     setOpen(false);
     router.push(profileHref);
@@ -58,19 +63,11 @@ export default function UserMenu({ name, role, profileHref, onLogout, profilePho
         aria-label="Open user menu"
         className="flex items-center gap-2 p-1 pr-2 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
       >
-        {/* [NEW]: Display the photo if available, otherwise fallback to the blue circle */}
-        {profilePhoto ? (
-          <img src={profilePhoto} alt={name} className="w-9 h-9 rounded-full object-cover border border-gray-200" />
-        ) : (
-          <span className="w-9 h-9 rounded-full bg-blue-700 text-white flex items-center justify-center text-sm font-semibold">
-            {initial}
-          </span>
-        )}
-        
-        {/* [NEW]: Standard inline SVG replacing lucide-react ChevronDown */}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}>
-          <path d="m6 9 6 6 6-6"/>
-        </svg>
+        <Avatar name={name} photo={photo} size={36} />
+        <ChevronDown
+          size={16}
+          className={`text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {open && (

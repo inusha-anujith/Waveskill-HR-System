@@ -10,6 +10,9 @@ import AdminEmployeeDetailsModal from '../../../components/Modals/AdminEmployeeD
 import ConfirmModal from '../../../components/Modals/ConfirmModal';
 import FilterSelect, { FilterOption } from '../../../components/FilterSelect/FilterSelect';
 import { useToast } from '../../../components/Toast/ToastProvider';
+import Avatar from '../../../components/Avatar/Avatar';
+import SearchHint from '../../../components/FilterSelect/SearchHint';
+import { useDebouncedSearch, useLatestRequest, isAbortError } from '../../../hooks/useDebouncedSearch';
 import { API_BASE, authHeaders, clearAuth, getStoredName, formatDate } from '../../../lib/api';
 
 interface BackendUser {
@@ -27,6 +30,7 @@ interface BackendUser {
   maritalStatus?: string;
   cvUpdateStatus?: string;
   cvFile?: string;
+  profilePhoto?: string;
   // Records created before the status field existed have no value; treat those
   // as Active everywhere in this page.
   status?: 'Active' | 'Inactive';
@@ -36,6 +40,17 @@ interface BackendUser {
 }
 
 const isActive = (u: { status?: string }) => u.status !== 'Inactive';
+
+// Counts come from the API over the whole collection. Deriving them from the
+// fetched rows would make them shrink as soon as a filter is applied.
+interface UserStats {
+  totalEmployees: number;
+  totalManagers: number;
+  inactiveCount: number;
+  recentJoins: number;
+  cvUpToDate: number;
+  activeStaff: number;
+}
 
 const ROLE_OPTIONS: FilterOption[] = [
   { value: '', label: 'All Roles' },
@@ -74,7 +89,9 @@ export default function AdminEmployeeManagePage() {
   const [users, setUsers] = useState<BackendUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const search = useDebouncedSearch();
+  const nextSignal = useLatestRequest();
+  const [stats, setStats] = useState<UserStats | null>(null);
   const [roleFilter, setRoleFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('Active');
@@ -87,53 +104,57 @@ export default function AdminEmployeeManagePage() {
   const [pendingToggle, setPendingToggle] = useState<{ user: BackendUser; action: 'deactivate' | 'reactivate' } | null>(null);
   const [toggling, setToggling] = useState(false);
 
+  // All filtering happens server-side. Every filter change refetches, and the
+  // AbortController makes sure a slow earlier response cannot overwrite a
+  // newer one while the user is typing.
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users`, { headers: authHeaders() });
+      const params = new URLSearchParams();
+      if (search.term) params.set('search', search.term);
+      if (statusFilter) params.set('status', statusFilter);
+      if (roleFilter) params.set('role', roleFilter);
+      if (deptFilter) params.set('department', deptFilter);
+
+      const res = await fetch(`${API_BASE}/api/admin/users?${params}`, {
+        headers: authHeaders(),
+        signal: nextSignal(),
+      });
       if (res.status === 401 || res.status === 403) { router.push('/login'); return; }
       const data = await res.json();
-      if (data.success) setUsers(data.data as BackendUser[]);
-      else setError(data.message || 'Failed to load users');
+      if (data.success) {
+        setUsers(data.data as BackendUser[]);
+        setStats(data.stats ?? null);
+        setError(null);
+      } else {
+        setError(data.message || 'Failed to load users');
+      }
     } catch (e: any) {
+      if (isAbortError(e)) return;   // superseded by a newer request
       setError(e.message || 'Network error');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => { setAdminName(getStoredName() || 'Admin'); }, []);
+
   useEffect(() => {
-    setAdminName(getStoredName() || 'Admin');
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [search.term, statusFilter, roleFilter, deptFilter]);
 
-  const filtered = useMemo(() => {
-    let list = users;
-    if (statusFilter === 'Active') list = list.filter(isActive);
-    else if (statusFilter === 'Inactive') list = list.filter(u => !isActive(u));
-    if (roleFilter) list = list.filter(u => u.role === roleFilter);
-    if (deptFilter) list = list.filter(u => (u.department || 'Unassigned') === deptFilter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(u =>
-        u.name?.toLowerCase().includes(q) ||
-        u.email?.toLowerCase().includes(q) ||
-        u.department?.toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [users, search, roleFilter, deptFilter, statusFilter]);
+  // The API already applied every filter — these rows are the result.
+  const filtered = users;
 
-  // Stat cards always describe *active* staff, so the numbers stay meaningful
-  // even while the table is filtered to the inactive list.
-  const activeUsers = useMemo(() => users.filter(isActive), [users]);
-  const totalEmployees = activeUsers.filter(u => u.role === 'Employee').length;
-  const totalManagers = activeUsers.filter(u => u.role === 'Manager').length;
-  const inactiveCount = users.length - activeUsers.length;
-  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const recentJoins = activeUsers.filter(u => u.role !== 'Admin' && u.joinDate && new Date(u.joinDate).getTime() >= thirtyDaysAgo).length;
-  const cvUpToDate = activeUsers.filter(u => u.cvUpdateStatus === 'Up to Date').length;
+  // Cards read from backend stats so they describe the organisation rather
+  // than whatever the current search happens to match.
+  const totalEmployees = stats?.totalEmployees ?? 0;
+  const totalManagers = stats?.totalManagers ?? 0;
+  const inactiveCount = stats?.inactiveCount ?? 0;
+  const recentJoins = stats?.recentJoins ?? 0;
+  const cvUpToDate = stats?.cvUpToDate ?? 0;
+  const activeStaff = stats?.activeStaff ?? 0;
 
   const confirmToggle = async () => {
     if (!pendingToggle) return;
@@ -192,6 +213,7 @@ export default function AdminEmployeeManagePage() {
     maritalStatus: u.maritalStatus || '—',
     cvUpdateStatus: u.cvUpdateStatus || 'Needs Update',
     cvFile: u.cvFile || '',
+    profilePhoto: u.profilePhoto || '',
   });
 
   return (
@@ -240,7 +262,7 @@ export default function AdminEmployeeManagePage() {
               <FileText size={18} className="text-gray-400" />
             </div>
             <p className="text-3xl font-semibold text-purple-500">{loading ? '...' : cvUpToDate}</p>
-            <p className="text-[11px] text-gray-400 mt-1">Of {activeUsers.filter(u => u.role !== 'Admin').length} active staff</p>
+            <p className="text-[11px] text-gray-400 mt-1">Of {activeStaff} active staff</p>
           </div>
 
           <button
@@ -283,10 +305,11 @@ export default function AdminEmployeeManagePage() {
                 <Search size={18} className="text-gray-400" />
               </div>
               <input
-                type="text" value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search by name, email, or department..."
+                type="text" value={search.value} onChange={e => search.setValue(e.target.value)}
+                placeholder="Search by name, email, or employee ID..."
                 className="w-full pl-11 pr-4 py-3 bg-[#f3f4f6] border-transparent rounded-xl focus:ring-2 focus:ring-gray-200 focus:bg-white text-sm text-gray-900 transition-colors outline-none"
               />
+              <SearchHint belowMinimum={search.belowMinimum} pending={search.pending} />
             </div>
             <FilterSelect options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} placeholder="Active" className="w-full md:w-40" />
             <FilterSelect options={ROLE_OPTIONS} value={roleFilter} onChange={setRoleFilter} placeholder="All Roles" className="w-full md:w-44" />
@@ -317,8 +340,13 @@ export default function AdminEmployeeManagePage() {
                       isActive(emp) ? 'bg-white' : 'bg-gray-50/60'
                     }`}
                   >
-                    <td className={`py-4 px-6 text-sm font-medium whitespace-nowrap ${isActive(emp) ? 'text-gray-800' : 'text-gray-400'}`}>
-                      {emp.name}
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={emp.name} photo={emp.profilePhoto} size={36} className={isActive(emp) ? '' : 'opacity-50'} />
+                        <span className={`text-sm font-medium ${isActive(emp) ? 'text-gray-800' : 'text-gray-400'}`}>
+                          {emp.name}
+                        </span>
+                      </div>
                     </td>
                     <td className="py-4 px-6 text-sm text-gray-500 whitespace-nowrap">{emp.email}</td>
                     <td className="py-4 px-6 whitespace-nowrap">{getRoleBadge(emp.role)}</td>
@@ -344,7 +372,21 @@ export default function AdminEmployeeManagePage() {
                     <td className="py-4 px-6 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2" onClick={e => e.stopPropagation()}>
                         <button
-                          onClick={() => setEditingUser({ _id: emp._id, name: emp.name, email: emp.email, role: emp.role, department: emp.department, position: emp.position, joinDate: emp.joinDate })}
+                          // Every field the modal submits must be seeded here.
+                          // maritalStatus and cvUpdateStatus were missing, so
+                          // the dropdowns opened blank and saving overwrote the
+                          // stored values with '' and 'Needs Update'.
+                          onClick={() => setEditingUser({
+                            _id: emp._id,
+                            name: emp.name,
+                            email: emp.email,
+                            role: emp.role,
+                            department: emp.department,
+                            position: emp.position,
+                            joinDate: emp.joinDate,
+                            maritalStatus: emp.maritalStatus,
+                            cvUpdateStatus: emp.cvUpdateStatus,
+                          })}
                           className="border border-gray-200 text-gray-500 hover:text-gray-800 hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
                           title="Edit"
                         >

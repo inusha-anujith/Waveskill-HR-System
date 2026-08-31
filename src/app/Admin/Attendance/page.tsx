@@ -8,6 +8,8 @@ import FilterSelect, { FilterOption } from '../../../components/FilterSelect/Fil
 import { Search, Calendar, Download } from 'lucide-react';
 import { API_BASE, authHeaders, clearAuth, formatTime, getStoredName } from '../../../lib/api';
 import { useToast } from '../../../components/Toast/ToastProvider';
+import SearchHint from '../../../components/FilterSelect/SearchHint';
+import { useDebouncedSearch, useLatestRequest, isAbortError } from '../../../hooks/useDebouncedSearch';
 
 interface AttendanceRow {
   _id: string;
@@ -62,7 +64,9 @@ export default function AdminAttendancePage() {
   const [records, setRecords] = useState<AttendanceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const search = useDebouncedSearch();
+  const nextSignal = useLatestRequest();
+  const [stats, setStats] = useState<{ present: number; late: number; absent: number } | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [period, setPeriod] = useState<Period>('today');
   const [customFrom, setCustomFrom] = useState('');
@@ -78,13 +82,22 @@ export default function AdminAttendancePage() {
       if (from) params.set('from', from);
       if (to) params.set('to', to);
       if (statusFilter) params.set('status', statusFilter);
+      if (search.term) params.set('search', search.term);
 
-      const res = await fetch(`${API_BASE}/api/admin/attendance?${params.toString()}`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/admin/attendance?${params.toString()}`, {
+        headers: authHeaders(),
+        signal: nextSignal(),
+      });
       if (res.status === 401 || res.status === 403) { router.push('/login'); return; }
       const data = await res.json();
-      if (data.success) setRecords(data.data as AttendanceRow[]);
-      else setError(data.message || 'Failed to load attendance');
+      if (data.success) {
+        setRecords(data.data as AttendanceRow[]);
+        setStats(data.stats ?? null);
+      } else {
+        setError(data.message || 'Failed to load attendance');
+      }
     } catch (e: any) {
+      if (isAbortError(e)) return;
       setError(e.message || 'Network error');
     } finally {
       setLoading(false);
@@ -98,17 +111,16 @@ export default function AdminAttendancePage() {
   useEffect(() => {
     fetchAttendance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period, statusFilter, customFrom, customTo]);
+  }, [period, statusFilter, customFrom, customTo, search.term]);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return records;
-    const q = search.toLowerCase();
-    return records.filter(r => (r.user?.name || '').toLowerCase().includes(q) || (r.user?.email || '').toLowerCase().includes(q));
-  }, [records, search]);
+  // Rows arrive already filtered by the API.
+  const filtered = records;
 
-  const presentCount = filtered.filter(r => r.status === 'Present').length;
-  const lateCount = filtered.filter(r => r.status === 'Late').length;
-  const absentCount = filtered.filter(r => r.status === 'Absent').length;
+  // Counts describe the selected period, not the current search, so narrowing
+  // to one employee no longer rewrites the Present/Late/Absent totals.
+  const presentCount = stats?.present ?? 0;
+  const lateCount = stats?.late ?? 0;
+  const absentCount = stats?.absent ?? 0;
 
   const handleLogout = () => { clearAuth(); router.push('/login'); };
 
@@ -182,10 +194,11 @@ export default function AdminAttendancePage() {
                 <Search size={18} className="text-gray-400" />
               </div>
               <input
-                type="text" value={search} onChange={e => setSearch(e.target.value)}
+                type="text" value={search.value} onChange={e => search.setValue(e.target.value)}
                 placeholder="Search by employee name..."
                 className="w-full pl-11 pr-4 py-3 bg-[#f3f4f6] border-transparent rounded-xl focus:ring-2 focus:ring-gray-200 focus:bg-white text-sm text-gray-900 outline-none"
               />
+              <SearchHint belowMinimum={search.belowMinimum} pending={search.pending} />
             </div>
             <FilterSelect options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} placeholder="All Status" className="w-full md:w-48" />
           </div>

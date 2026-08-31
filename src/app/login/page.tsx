@@ -59,6 +59,9 @@ export default function LoginPage() {
         localStorage.setItem("token", userData.token);
         localStorage.setItem("role", userData.role || "Employee");
         localStorage.setItem("name", userData.name || "");
+        // Cached so the header avatar can render without an extra request
+        if (userData.profilePhoto) localStorage.setItem("profilePhoto", userData.profilePhoto);
+        else localStorage.removeItem("profilePhoto");
 
         // DYNAMIC ROLE-BASED ROUTING
         if (userData.role === "Admin") {

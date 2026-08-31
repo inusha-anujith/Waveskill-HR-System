@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import EmployeeNavi from '../../../components/EmployeeNavi/EmployeeNavi';
 import EmployeeTabs from '../../../components/EmployeeNavi/EmployeeTabs';
 import ProjectDetailsView from '../../../components/EmployeeProjects/ProjectDetailsView';
+import Avatar from '../../../components/Avatar/Avatar';
 import { Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -141,10 +142,11 @@ export default function EmployeeProjectsPage() {
                 <hr className="border-gray-100 mb-4" />
 
                 <div className="flex items-center gap-3 mt-auto">
-                  <div className="w-8 h-8 rounded-full bg-blue-700 text-white flex items-center justify-center text-sm font-semibold">
-                    {/* Just grabbing the first letter of the first team member, or 'U' for User */}
-                    {project.team && project.team.length > 0 && project.team[0].user?.name ? project.team[0].user.name.charAt(0) : 'U'}
-                  </div>
+                  <Avatar
+                    name={project.team?.[0]?.user?.name}
+                    photo={project.team?.[0]?.user?.profilePhoto}
+                    size={32}
+                  />
                   <span className="text-sm font-medium text-gray-700">
                     {project.team && project.team.length > 0 && project.team[0].user?.name ? project.team[0].user.name : 'Team Member'}
                   </span>

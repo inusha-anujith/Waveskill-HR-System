@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Calendar, AlignLeft, CheckSquare, Clock, CheckCircle2, Circle, Users, Settings } from 'lucide-react';
+import Avatar from '../Avatar/Avatar';
 
 interface ManagerProjectDetailsViewProps {
   project: any;
@@ -166,9 +167,7 @@ export default function ManagerProjectDetailsView({ project, onClose, onProgress
             
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                <div className="w-8 h-8 rounded-full bg-blue-700 text-white flex items-center justify-center text-xs font-semibold">
-                  {project.assignee.charAt(0)}
-                </div>
+                <Avatar name={project.assignee} photo={project.assigneePhoto} size={32} />
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-gray-900">{project.assignee}</span>
                   <span className="text-xs text-gray-500">Lead Assignee</span>

@@ -15,6 +15,20 @@ export const getStoredName = (): string | null => {
     return localStorage.getItem("name");
 };
 
+// Cached so the header avatar renders with no extra request. Written at login
+// and kept in sync by the Edit Profile modal, which is the only place a user
+// can change their own photo.
+export const getStoredPhoto = (): string | null => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("profilePhoto");
+};
+
+export const setStoredPhoto = (photo: string) => {
+    if (typeof window === "undefined") return;
+    if (photo) localStorage.setItem("profilePhoto", photo);
+    else localStorage.removeItem("profilePhoto");
+};
+
 export const authHeaders = (): Record<string, string> => {
     const token = getToken();
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -45,4 +59,5 @@ export const clearAuth = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("name");
+    localStorage.removeItem("profilePhoto");
 };
