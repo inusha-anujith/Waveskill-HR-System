@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, LogOut, User } from 'lucide-react';
+import Avatar from '../Avatar/Avatar';
+import { getStoredPhoto } from '../../lib/api';
 
 interface UserMenuProps {
   /** Display name of the signed-in user */
@@ -21,7 +23,11 @@ interface UserMenuProps {
 export default function UserMenu({ name, role, profileHref, onLogout }: UserMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Read after mount: localStorage is unavailable during server rendering.
+  useEffect(() => { setPhoto(getStoredPhoto()); }, []);
 
   // Close on outside click and on Escape.
   useEffect(() => {
@@ -44,8 +50,6 @@ export default function UserMenu({ name, role, profileHref, onLogout }: UserMenu
     };
   }, [open]);
 
-  const initial = (name || '?').trim().charAt(0).toUpperCase();
-
   const goToProfile = () => {
     setOpen(false);
     router.push(profileHref);
@@ -65,9 +69,7 @@ export default function UserMenu({ name, role, profileHref, onLogout }: UserMenu
         aria-label="Open user menu"
         className="flex items-center gap-2 p-1 pr-2 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
       >
-        <span className="w-9 h-9 rounded-full bg-blue-700 text-white flex items-center justify-center text-sm font-semibold">
-          {initial}
-        </span>
+        <Avatar name={name} photo={photo} size={36} />
         <ChevronDown
           size={16}
           className={`text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}

@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 // [NEW]: Import the Change Password Modal component so it can be rendered on top
 import ChangePasswordModal from './ChangePasswordModal';
+import { resolvePhotoUrl } from '../Avatar/Avatar';
+import { setStoredPhoto } from '../../lib/api';
 
 export default function EditProfileModal({ isOpen, onClose, currentData, onSaveSuccess }: any) {
   const [formData, setFormData] = useState({
@@ -23,6 +25,12 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
   const [skills, setSkills] = useState<any[]>([]);
   const [newSkill, setNewSkill] = useState({ name: '', level: 'Beginner' });
   const [isLoading, setIsLoading] = useState(false);
+
+  // Photo and CV upload immediately on selection (they are multipart requests,
+  // separate from the JSON save), so they need their own busy/error state.
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [cvBusy, setCvBusy] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // [NEW]: State to control the visibility of the Change Password sub-modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -65,45 +73,122 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
       if (value.length <= 9) setFormData({ ...formData, [e.target.name]: value });
   };
 
-  const handlePhotoUpload = (e: any) => {
+  // The 400x400 centre-crop is kept from the original implementation: it keeps
+  // uploads around 30KB, so no server-side image processing is needed. The
+  // difference is the output — a Blob that is actually uploaded, rather than a
+  // base64 string that only ever lived in this form's state.
+  const cropToBlob = (file: File): Promise<Blob> =>
+      new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('Could not read that image'));
+          reader.onload = (event: any) => {
+              const img = new Image();
+              img.onerror = () => reject(new Error('That file is not a readable image'));
+              img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  const size = Math.min(img.width, img.height);
+                  canvas.width = 400;
+                  canvas.height = 400;
+                  const ctx = canvas.getContext('2d');
+
+                  const startX = (img.width - size) / 2;
+                  const startY = (img.height - size) / 2;
+
+                  ctx?.drawImage(img, startX, startY, size, size, 0, 0, 400, 400);
+                  canvas.toBlob(
+                      (blob) => (blob ? resolve(blob) : reject(new Error('Could not process that image'))),
+                      'image/jpeg',
+                      0.8
+                  );
+              };
+              img.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+      });
+
+  const handlePhotoUpload = async (e: any) => {
       const file = e.target.files[0];
       if (!file) return;
+      e.target.value = '';   // allow re-picking the same file after an error
 
-      const reader = new FileReader();
-      reader.onload = (event: any) => {
-          const img = new Image();
-          img.onload = () => {
-              const canvas = document.createElement('canvas');
-              const size = Math.min(img.width, img.height);
-              canvas.width = 400; 
-              canvas.height = 400;
-              const ctx = canvas.getContext('2d');
-              
-              const startX = (img.width - size) / 2;
-              const startY = (img.height - size) / 2;
-              
-              ctx?.drawImage(img, startX, startY, size, size, 0, 0, 400, 400);
-              const base64Photo = canvas.toDataURL('image/jpeg', 0.8);
-              setFormData({ ...formData, profilePhoto: base64Photo });
-          };
-          img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
+      setPhotoBusy(true);
+      setUploadError(null);
+      try {
+          const blob = await cropToBlob(file);
+
+          const body = new FormData();
+          body.append('photo', blob, 'avatar.jpg');
+
+          const token = localStorage.getItem('token');
+          const res = await fetch("http://localhost:5001/api/profile/upload-photo", {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },   // no Content-Type: the browser sets the multipart boundary
+              body
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message || 'Upload failed');
+
+          setFormData((prev) => ({ ...prev, profilePhoto: data.profilePhoto }));
+          setStoredPhoto(data.profilePhoto);   // keeps the header avatar in sync
+      } catch (err: any) {
+          setUploadError(err.message || 'Could not upload that photo');
+      } finally {
+          setPhotoBusy(false);
+      }
   };
 
-  const handleCVUpload = (e: any) => {
+  const handleCVUpload = async (e: any) => {
       const file = e.target.files[0];
-      if (file) setFormData({ ...formData, cvFileName: file.name });
+      if (!file) return;
+      e.target.value = '';
+
+      setCvBusy(true);
+      setUploadError(null);
+      try {
+          const body = new FormData();
+          body.append('cvFile', file);
+
+          const token = localStorage.getItem('token');
+          const res = await fetch("http://localhost:5001/api/profile/upload-cv", {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+              body
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message || 'Upload failed');
+
+          setFormData((prev) => ({ ...prev, cvFileName: data.cvFile }));
+      } catch (err: any) {
+          setUploadError(err.message || 'Could not upload that CV');
+      } finally {
+          setCvBusy(false);
+      }
   };
 
-  const removePhoto = (e: any) => {
+  const removePhoto = async (e: any) => {
       e.preventDefault();
-      setFormData({ ...formData, profilePhoto: '' });
+      setPhotoBusy(true);
+      setUploadError(null);
+      try {
+          const token = localStorage.getItem('token');
+          await fetch("http://localhost:5001/api/profile/photo", {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` }
+          });
+          setFormData((prev) => ({ ...prev, profilePhoto: '' }));
+          setStoredPhoto('');
+      } catch {
+          setUploadError('Could not remove the photo');
+      } finally {
+          setPhotoBusy(false);
+      }
   };
 
+  // Clears the reference only. The stored file is removed by the server the
+  // next time a CV is uploaded, so nothing is orphaned.
   const removeCV = (e: any) => {
       e.preventDefault();
-      setFormData({ ...formData, cvFileName: '' });
+      setFormData((prev) => ({ ...prev, cvFileName: '' }));
   };
 
   const addSkill = () => {
@@ -123,10 +208,14 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
       setIsLoading(true);
       try {
           const token = localStorage.getItem('token');
+          // profilePhoto and cvFileName are owned by the dedicated upload
+          // endpoints. Sending them here too would let this JSON save overwrite
+          // a freshly uploaded filename with a stale one.
+          const { profilePhoto, cvFileName, ...jsonFields } = formData;
           const res = await fetch("http://localhost:5001/api/users/me", {
               method: 'PUT',
               headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...formData, skills })
+              body: JSON.stringify({ ...jsonFields, skills })
           });
           const data = await res.json();
           if (data.success) {
@@ -162,15 +251,21 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* File Uploads */}
+
+            {uploadError && (
+                <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl p-3">{uploadError}</div>
+            )}
+
+            {/* File Uploads — these save immediately, they do not wait for Save */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="relative border-2 border-dashed border-gray-200 hover:border-blue-400 rounded-xl p-4 flex flex-col items-center justify-center transition-colors overflow-hidden group">
                     <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
-                        <input type="file" accept="image/png, image/jpeg, image/jpg" className="hidden" onChange={handlePhotoUpload} />
-                        {formData.profilePhoto ? (
+                        <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" className="hidden" disabled={photoBusy} onChange={handlePhotoUpload} />
+                        {photoBusy ? (
+                            <p className="text-sm font-semibold text-gray-500 py-4">Uploading...</p>
+                        ) : formData.profilePhoto ? (
                             <div className="absolute inset-0 w-full h-full">
-                                <img src={formData.profilePhoto} alt="Preview" className="w-full h-full object-cover" />
+                                <img src={resolvePhotoUrl(formData.profilePhoto) || ''} alt="Preview" className="w-full h-full object-cover" />
                             </div>
                         ) : (
                             <>
@@ -189,11 +284,12 @@ export default function EditProfileModal({ isOpen, onClose, currentData, onSaveS
                 
                 <div className="relative border-2 border-dashed border-gray-200 hover:border-orange-400 rounded-xl p-4 flex flex-col items-center justify-center transition-colors">
                     <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
-                        <input type="file" accept=".pdf, .doc, .docx" className="hidden" onChange={handleCVUpload} />
+                        {/* PDF only — the server rejects anything else */}
+                        <input type="file" accept="application/pdf,.pdf" className="hidden" disabled={cvBusy} onChange={handleCVUpload} />
                         <svg className="text-orange-500 mb-2" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
                         <p className="text-sm font-semibold text-gray-700">Upload CV</p>
                         <p className="text-xs font-medium text-gray-900 mt-1 truncate w-full text-center px-2">
-                            {formData.cvFileName || "Click to browse"}
+                            {cvBusy ? 'Uploading...' : formData.cvFileName ? 'CV uploaded' : 'Click to browse (PDF)'}
                         </p>
                     </label>
                     {formData.cvFileName && (

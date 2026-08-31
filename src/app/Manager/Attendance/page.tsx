@@ -9,6 +9,8 @@ import { Search, Calendar, Download, Clock, CheckCircle2, XCircle } from 'lucide
 import { API_BASE, authHeaders, clearAuth, getStoredName, formatTime } from '../../../lib/api';
 import { useToast } from '../../../components/Toast/ToastProvider';
 import OTActionModal from '../../../components/Modals/OTActionModal';
+import SearchHint from '../../../components/FilterSelect/SearchHint';
+import { useDebouncedSearch, useLatestRequest, isAbortError } from '../../../hooks/useDebouncedSearch';
 
 interface AttendanceRecord {
   _id: string;
@@ -87,7 +89,8 @@ export default function ManagerAttendancePage() {
   // Attendance state
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [attLoading, setAttLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const search = useDebouncedSearch();
+  const nextAttSignal = useLatestRequest();
   const [statusFilter, setStatusFilter] = useState('');
   const [period, setPeriod] = useState<Period>('today');
   const [customFrom, setCustomFrom] = useState('');
@@ -97,7 +100,8 @@ export default function ManagerAttendancePage() {
   const [otRequests, setOtRequests] = useState<OTRequest[]>([]);
   const [otLoading, setOtLoading] = useState(false);
   const [otStatusFilter, setOtStatusFilter] = useState('');
-  const [otSearch, setOtSearch] = useState('');
+  const otSearch = useDebouncedSearch();
+  const nextOtSignal = useLatestRequest();
   const [processingOT, setProcessingOT] = useState<string | null>(null);
   const [reviewingOT, setReviewingOT] = useState<OTRequest | null>(null);
 
@@ -109,12 +113,16 @@ export default function ManagerAttendancePage() {
       if (from) params.set('from', from);
       if (to) params.set('to', to);
       if (statusFilter) params.set('status', statusFilter);
-      const res = await fetch(`${API_BASE}/api/admin/attendance?${params}`, { headers: authHeaders() });
+      if (search.term) params.set('search', search.term);
+      const res = await fetch(`${API_BASE}/api/admin/attendance?${params}`, {
+        headers: authHeaders(),
+        signal: nextAttSignal(),
+      });
       if (res.status === 401 || res.status === 403) { router.push('/login'); return; }
       const data = await res.json();
       if (data.success) setRecords(data.data as AttendanceRecord[]);
       else toast.error(data.message || 'Failed to load attendance');
-    } catch { toast.error('Network error'); }
+    } catch (e) { if (!isAbortError(e)) toast.error('Network error'); }
     finally { setAttLoading(false); }
   };
 
@@ -123,30 +131,26 @@ export default function ManagerAttendancePage() {
     try {
       const params = new URLSearchParams();
       if (otStatusFilter) params.set('status', otStatusFilter);
-      const res = await fetch(`${API_BASE}/api/admin/ot?${params}`, { headers: authHeaders() });
+      if (otSearch.term) params.set('search', otSearch.term);
+      const res = await fetch(`${API_BASE}/api/admin/ot?${params}`, {
+        headers: authHeaders(),
+        signal: nextOtSignal(),
+      });
       if (res.status === 401 || res.status === 403) { router.push('/login'); return; }
       const data = await res.json();
       if (data.success) setOtRequests(data.data as OTRequest[]);
       else toast.error(data.message || 'Failed to load OT requests');
-    } catch { toast.error('Network error'); }
+    } catch (e) { if (!isAbortError(e)) toast.error('Network error'); }
     finally { setOtLoading(false); }
   };
 
   useEffect(() => { setManagerName(getStoredName() || 'Manager'); }, []);
-  useEffect(() => { fetchAttendance(); }, [period, statusFilter, customFrom, customTo]); // eslint-disable-line
-  useEffect(() => { if (activeView === 'ot') fetchOTRequests(); }, [activeView, otStatusFilter]); // eslint-disable-line
+  useEffect(() => { fetchAttendance(); }, [period, statusFilter, customFrom, customTo, search.term]); // eslint-disable-line
+  useEffect(() => { if (activeView === 'ot') fetchOTRequests(); }, [activeView, otStatusFilter, otSearch.term]); // eslint-disable-line
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return records;
-    const q = search.toLowerCase();
-    return records.filter(r => r.user?.name?.toLowerCase().includes(q) || r.user?.email?.toLowerCase().includes(q));
-  }, [records, search]);
-
-  const filteredOT = useMemo(() => {
-    if (!otSearch.trim()) return otRequests;
-    const q = otSearch.toLowerCase();
-    return otRequests.filter(r => r.user?.name?.toLowerCase().includes(q));
-  }, [otRequests, otSearch]);
+  // Both lists arrive already filtered by the API.
+  const filtered = records;
+  const filteredOT = otRequests;
 
   const handleOTAction = async (id: string, action: 'approve' | 'reject', reviewNote = '') => {
     setProcessingOT(id);
@@ -250,9 +254,10 @@ export default function ManagerAttendancePage() {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Search size={18} className="text-gray-400" />
                   </div>
-                  <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+                  <input type="text" value={search.value} onChange={e => search.setValue(e.target.value)}
                     placeholder="Search by employee name or email..."
                     className="w-full pl-11 pr-4 py-3 bg-[#f3f4f6] border-transparent rounded-xl focus:ring-2 focus:ring-gray-200 focus:bg-white text-sm text-gray-900 outline-none" />
+                  <SearchHint belowMinimum={search.belowMinimum} pending={search.pending} />
                 </div>
                 <FilterSelect options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} placeholder="All Status" className="w-full md:w-48" />
               </div>
@@ -321,9 +326,10 @@ export default function ManagerAttendancePage() {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Search size={18} className="text-gray-400" />
                   </div>
-                  <input type="text" value={otSearch} onChange={e => setOtSearch(e.target.value)}
+                  <input type="text" value={otSearch.value} onChange={e => otSearch.setValue(e.target.value)}
                     placeholder="Search by employee name..."
                     className="w-full pl-11 pr-4 py-3 bg-[#f3f4f6] border-transparent rounded-xl focus:ring-2 focus:ring-gray-200 focus:bg-white text-sm text-gray-900 outline-none" />
+                  <SearchHint belowMinimum={otSearch.belowMinimum} pending={otSearch.pending} />
                 </div>
                 <FilterSelect options={OT_STATUS_OPTIONS} value={otStatusFilter} onChange={setOtStatusFilter} placeholder="All Status" className="w-full md:w-48" />
               </div>

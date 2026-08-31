@@ -20,6 +20,7 @@ interface UiProject {
   progress: number;
   startDate: string;
   assignee: string;
+  assigneePhoto?: string;
   tasks: { todo: string[]; inProgress: string[]; completed: string[] };
 }
 
@@ -39,6 +40,7 @@ const toUiProject = (p: any): UiProject => ({
   progress: p.progress || 0,
   startDate: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '',
   assignee: p.team?.[0]?.user?.name || 'Unassigned',
+  assigneePhoto: p.team?.[0]?.user?.profilePhoto || '',
   tasks: {
     todo: (p.tasks || []).filter((t: any) => t.status === 'To Do').map((t: any) => t.title),
     inProgress: (p.tasks || []).filter((t: any) => t.status === 'In Progress').map((t: any) => t.title),

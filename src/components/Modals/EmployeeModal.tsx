@@ -33,7 +33,10 @@ interface FormErrors {
   position?: string;
 }
 
-const DEPARTMENTS = ['Engineering', 'Marketing', 'Human Resources', 'Sales', 'Finance', 'Operations'];
+// 'Unassigned' is the schema default and exists on real records, so it must be
+// selectable — otherwise editing such a user shows a select with no matching
+// option and the department can be changed by accident.
+const DEPARTMENTS = ['Engineering', 'Marketing', 'Human Resources', 'Sales', 'Finance', 'Operations', 'Unassigned'];
 const MARITAL_STATUSES = ['Single', 'Married', 'Divorced', 'Widowed'];
 const CV_STATUSES = ['Needs Update', 'Pending Review', 'Up to Date'];
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import EmployeeNavi from '../../../components/EmployeeNavi/EmployeeNavi';
 import EmployeeTabs from '../../../components/EmployeeNavi/EmployeeTabs';
 import EditProfileModal from '../../../components/Modals/EditProfileModal';
+import Avatar from '../../../components/Avatar/Avatar';
 import { useRouter } from 'next/navigation';
 import { 
   Edit, User, Mail, Phone, Calendar, Briefcase, Building, Award, Users, 
@@ -18,6 +19,7 @@ export default function EmployeeProfilePage() {
   const [successMessage, setSuccessMessage] = useState("");
 
   const [userData, setUserData] = useState<any>(null);
+  const [cvLoading, setCvLoading] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [leaveStats, setLeaveStats] = useState({ totalLeaves: 0, approvedDays: 0, pendingDays: 0, rejectedDays: 0 });
 
@@ -64,6 +66,31 @@ export default function EmployeeProfilePage() {
     fetchAttendanceStatus();
   }, []);
 
+  // The CV route needs a Bearer token, so it cannot be a plain <a href>.
+  // Fetch it as a blob and hand the browser an object URL instead.
+  const viewMyCV = async () => {
+    setCvLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch("http://localhost:5001/api/profile/cv", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || 'Could not open your CV');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      alert('Network error while opening your CV');
+    } finally {
+      setCvLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     router.push('/login');
@@ -107,13 +134,7 @@ export default function EmployeeProfilePage() {
         <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-6">
             <div className="relative">
-              {userData.profilePhoto ? (
-                  <img src={userData.profilePhoto} alt="Profile" className="w-20 h-20 rounded-full object-cover border-2 border-white shadow-sm bg-white" />
-              ) : (
-                  <div className="w-20 h-20 rounded-full bg-blue-700 text-white flex items-center justify-center text-3xl font-bold uppercase shadow-sm">
-                    {userData.name.charAt(0)}
-                  </div>
-              )}
+              <Avatar name={userData.name} photo={userData.profilePhoto} size={80} className="border-2 border-white shadow-sm" />
               <div className={`absolute bottom-0 right-1 w-5 h-5 border-4 border-white rounded-full ${isCheckedIn ? 'bg-green-500' : 'bg-red-500'}`}></div>
             </div>
             
@@ -130,8 +151,12 @@ export default function EmployeeProfilePage() {
           
           <div className="flex gap-3">
               {userData.cvFile && (
-                  <button className="bg-white border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700 px-5 py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium">
-                    <FileText size={16} /> {userData.cvFile}
+                  <button
+                    onClick={viewMyCV}
+                    disabled={cvLoading}
+                    className="bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-60 transition-colors text-gray-700 px-5 py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium"
+                  >
+                    <FileText size={16} /> {cvLoading ? 'Opening...' : 'View My CV'}
                   </button>
               )}
               <button onClick={() => setIsEditModalOpen(true)} className="bg-[#1a1a1a] hover:bg-black transition-colors text-white px-5 py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium">

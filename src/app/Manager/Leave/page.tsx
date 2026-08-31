@@ -55,17 +55,27 @@ export default function ManagerLeavePage() {
   const [pendingReject, setPendingReject] = useState<UiLeave | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [managerName, setManagerName] = useState('Manager');
+  const [stats, setStats] = useState<{ pending: number; approved: number; rejected: number } | null>(null);
 
+  // The status filter is applied by the API rather than in the browser.
   const fetchLeaves = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/leaves`, { headers: authHeaders() });
+      const params = new URLSearchParams();
+      if (filter && filter !== 'All') params.set('status', filter);
+
+      const res = await fetch(`${API_BASE}/api/admin/leaves?${params}`, { headers: authHeaders() });
       if (res.status === 401 || res.status === 403) {
         router.push('/login');
         return;
       }
       const data = await res.json();
-      if (data.success) setLeaves((data.data as BackendLeave[]).map(toUi));
-      else setError(data.message || 'Failed to load leaves');
+      if (data.success) {
+        setLeaves((data.data as BackendLeave[]).map(toUi));
+        setStats(data.stats ?? null);
+      } else {
+        setError(data.message || 'Failed to load leaves');
+      }
     } catch (e: any) {
       setError(e.message || 'Network error');
     } finally {
@@ -73,11 +83,12 @@ export default function ManagerLeavePage() {
     }
   };
 
+  useEffect(() => { setManagerName(getStoredName() || 'Manager'); }, []);
+
   useEffect(() => {
-    setManagerName(getStoredName() || 'Manager');
     fetchLeaves();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filter]);
 
   const applyStatus = async (id: string, newStatus: string) => {
     const action = newStatus === 'Approved' ? 'approve' : 'reject';
@@ -124,10 +135,12 @@ export default function ManagerLeavePage() {
     router.push('/login');
   };
 
-  const filteredRequests = leaves.filter(req => filter === 'All' ? true : req.status === filter);
-  const pendingCount = leaves.filter(req => req.status === 'Pending').length;
-  const approvedCount = leaves.filter(req => req.status === 'Approved').length;
-  const rejectedCount = leaves.filter(req => req.status === 'Rejected').length;
+  // Already filtered server-side; counts come from backend stats so they do
+  // not collapse to whichever status tab is selected.
+  const filteredRequests = leaves;
+  const pendingCount = stats?.pending ?? 0;
+  const approvedCount = stats?.approved ?? 0;
+  const rejectedCount = stats?.rejected ?? 0;
 
   const getTypeBadge = (type: string) => {
     const lower = type.toLowerCase();
