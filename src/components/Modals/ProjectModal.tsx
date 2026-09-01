@@ -26,7 +26,9 @@ export default function ProjectModal({ isOpen, onClose, project, onSuccess }: Pr
   const [priority, setPriority] = useState('normal priority');
   const [status, setStatus] = useState('Active');
   const [overview, setOverview] = useState('');
-  const [assigneeId, setAssigneeId] = useState('');
+  // Several employees can be selected up front, so this is a set of ids
+  // rather than the single assignee it used to be.
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,15 +47,18 @@ export default function ProjectModal({ isOpen, onClose, project, onSuccess }: Pr
       setPriority('normal priority');
       setStatus('Active');
       setOverview('');
-      setAssigneeId('');
+      setAssigneeIds([]);
     }
     setError(null);
 
-    fetch(`${API_BASE}/api/admin/users`, { headers: authHeaders() })
+    fetch(`${API_BASE}/api/admin/users?status=Active`, { headers: authHeaders() })
       .then(r => r.json())
       .then(data => { if (data.success) setUsers(data.data.filter((u: any) => u.role !== 'Admin')); })
       .catch(() => {});
   }, [isOpen, project]);
+
+  const toggleAssignee = (id: string) =>
+    setAssigneeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   if (!isOpen) return null;
 
@@ -63,7 +68,12 @@ export default function ProjectModal({ isOpen, onClose, project, onSuccess }: Pr
     setError(null);
 
     const body: any = { title, priority, status, overview };
-    if (assigneeId) body.team = [{ user: assigneeId, role: 'Team Member' }];
+    // Only seed the team when creating. On edit, updateProject replaces the
+    // whole array, so sending one assignee here would silently unassign every
+    // other member — team membership is managed in the project details panel.
+    if (!isEdit && assigneeIds.length) {
+      body.team = assigneeIds.map(id => ({ user: id, role: 'Team Member' }));
+    }
 
     try {
       const url = isEdit ? `${API_BASE}/api/projects/${project!.id}` : `${API_BASE}/api/projects`;
@@ -138,17 +148,41 @@ export default function ProjectModal({ isOpen, onClose, project, onSuccess }: Pr
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Assign Employee</label>
-            <select
-              value={assigneeId}
-              onChange={e => setAssigneeId(e.target.value)}
-              className="w-full px-4 py-3.5 bg-[#f3f4f6] border-transparent rounded-xl focus:ring-2 focus:ring-gray-200 text-gray-900 outline-none appearance-none cursor-pointer"
-            >
-              <option value="">Select employee...</option>
-              {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
-            </select>
-          </div>
+          {/* Creation only. Once a project exists, members are added and
+              removed from the Team Allocation panel in project details. */}
+          {!isEdit && (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Assign Employees
+                {assigneeIds.length > 0 && (
+                  <span className="ml-2 text-xs font-normal text-gray-500">{assigneeIds.length} selected</span>
+                )}
+              </label>
+
+              {/* Checkbox list rather than a select, so several people can be
+                  assigned in one go when the project is created. */}
+              <div className="scroll-area max-h-44 overflow-y-auto bg-[#f3f4f6] rounded-xl p-1">
+                {users.length === 0 && (
+                  <p className="text-sm text-gray-400 px-3 py-3">Loading employees...</p>
+                )}
+                {users.map(u => (
+                  <label
+                    key={u._id}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={assigneeIds.includes(u._id)}
+                      onChange={() => toggleAssignee(u._id)}
+                      className="w-4 h-4 accent-black cursor-pointer"
+                    />
+                    <span className="text-sm text-gray-900">{u.name}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">Members can also be added or removed after the project is created.</p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">Description</label>
